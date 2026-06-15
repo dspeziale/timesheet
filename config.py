@@ -12,4 +12,4 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     APP_NAME = os.environ.get('APP_NAME') or 'RoxySheet'
-    APP_VERSION = os.environ.get('APP_VERSION') or '1.1'
+    APP_VERSION = os.environ.get('APP_VERSION') or '1.1.4'
