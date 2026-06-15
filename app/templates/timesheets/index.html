@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card card-primary card-outline">
+    <div class="card-header">
+        <h3 class="card-title">Timesheet</h3>
+        <div class="card-tools">
+            <a href="{{ url_for('timesheets.add') }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle"></i> Registra Giornata
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <table class="table table-bordered table-striped datatable">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Progetto</th>
+                    <th>Giornate</th>
+                    <th>Attività</th>
+                    <th>Luogo</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in timesheets %}
+                <tr>
+                    <td data-sort="{{ t.work_date.strftime('%Y%m%d') }}">{{ t.work_date|ita_day }} {{ t.work_date.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ t.project.name }}</td>
+                    <td>{{ t.days_worked }}</td>
+                    <td>{{ t.activity.name if t.activity else '' }}</td>
+                    <td>
+                        {% if t.is_smartworking %}
+                            <span class="badge bg-info">Smartworking</span>
+                        {% elif t.is_trasferta %}
+                            <span class="badge bg-warning text-dark">Trasferta</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Sede</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('timesheets.edit', id=t.id) }}" class="btn btn-warning btn-sm" title="Modifica">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form action="{{ url_for('timesheets.delete', id=t.id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Eliminare questa registrazione?');" title="Elimina">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

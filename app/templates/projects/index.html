@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card card-primary card-outline">
+    <div class="card-header">
+        <h3 class="card-title">Elenco Progetti/Commesse</h3>
+        <div class="card-tools">
+            <a href="{{ url_for('projects.add') }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle"></i> Nuovo Progetto
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <table class="table table-bordered table-striped datatable">
+            <thead>
+                <tr>
+                    <th>Codice</th>
+                    <th>Nome</th>
+                    <th>Cliente</th>
+                    <th>Periodo</th>
+                    <th>Stato</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for project in projects %}
+                <tr>
+                    <td>{{ project.code }}</td>
+                    <td>{{ project.name }}</td>
+                    <td>{{ project.customer.company_name }}</td>
+                    <td>
+                        {{ project.start_date.strftime('%d/%m/%Y') }} - 
+                        {{ project.end_date.strftime('%d/%m/%Y') if project.end_date else 'In corso' }}
+                    </td>
+                    <td>
+                        <span class="badge {{ 'text-bg-success' if project.status == 'Attivo' else 'text-bg-secondary' }}">
+                            {{ project.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('projects.edit', id=project.id) }}" class="btn btn-warning btn-sm">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form action="{{ url_for('projects.delete', id=project.id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Sei sicuro di voler eliminare questo progetto?');">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

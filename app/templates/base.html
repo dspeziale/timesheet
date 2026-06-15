@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} - {{ APP_NAME }}</title>
+    <!-- AdminLTE 4 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-beta1/dist/css/adminlte.min.css">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.min.css">
+    <!-- DataTables with Responsive Extension -->
+    <link href="https://cdn.datatables.net/v/bs5/dt-2.0.7/r-3.0.2/datatables.min.css" rel="stylesheet">
+    <!-- Google Fonts: PT Sans Narrow -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=PT+Sans+Narrow:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --app-font-size: 20px;
+        }
+        body {
+            font-family: 'PT Sans Narrow', sans-serif;
+            font-size: var(--app-font-size);
+        }
+        .flash-messages {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
+    </style>
+</head>
+<body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
+    <div class="app-wrapper">
+        <!-- Navbar -->
+        <nav class="app-header navbar navbar-expand bg-body">
+            <div class="container-fluid">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button"><i class="bi bi-list"></i></a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto flex-row align-items-center gap-2">
+                    <li class="nav-item d-flex align-items-center">
+                        <button id="btn-decrease-font" class="btn btn-sm btn-outline-secondary me-1" title="Riduci Testo">A-</button>
+                        <button id="btn-increase-font" class="btn btn-sm btn-outline-secondary" title="Ingrandisci Testo">A+</button>
+                    </li>
+                    <li class="nav-item d-flex align-items-center">
+                        <button id="btn-toggle-theme" class="btn btn-sm btn-outline-secondary" title="Cambia Tema">
+                            <i class="bi bi-moon-fill" id="theme-icon"></i>
+                        </button>
+                    </li>
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link px-2" href="{{ url_for('auth.profile') }}">
+                            <i class="bi bi-person"></i> 
+                            <span class="d-none d-sm-inline ms-1">{{ current_user.username }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-2" href="{{ url_for('auth.logout') }}" title="Logout">
+                            <i class="bi bi-box-arrow-right d-inline d-sm-none fs-5"></i>
+                            <span class="d-none d-sm-inline">Logout</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </nav>
+        
+        <!-- Sidebar -->
+        <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
+            <div class="sidebar-brand">
+                <a href="{{ url_for('dashboard.index') }}" class="brand-link">
+                    <span class="brand-text fw-light">{{ APP_NAME }}</span>
+                </a>
+            </div>
+            <div class="sidebar-wrapper">
+                <nav class="mt-2">
+                    <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu" data-accordion="false">
+                        <li class="nav-item">
+                            <a href="{{ url_for('dashboard.index') }}" class="nav-link">
+                                <i class="nav-icon bi bi-speedometer"></i>
+                                <p>Dashboard</p>
+                            </a>
+                        </li>
+                        <li class="nav-header">Anagrafiche</li>
+                        <li class="nav-item">
+                            <a href="{{ url_for('customers.index') }}" class="nav-link">
+                                <i class="nav-icon bi bi-building"></i>
+                                <p>Clienti</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ url_for('projects.index') }}" class="nav-link">
+                                <i class="nav-icon bi bi-folder"></i>
+                                <p>Progetti</p>
+                            </a>
+                        </li>
+                        <li class="nav-header">Operatività</li>
+                        <li class="nav-item">
+                            <a href="{{ url_for('timesheets.index') }}" class="nav-link">
+                                <i class="nav-icon bi bi-calendar-check"></i>
+                                <p>Timesheet</p>
+                            </a>
+                        </li>
+                        <li class="nav-header">Reportistica</li>
+                        <li class="nav-item">
+                            <a href="{{ url_for('reports.monthly') }}" class="nav-link">
+                                <i class="nav-icon bi bi-file-earmark-bar-graph"></i>
+                                <p>Riepilogo Mensile</p>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            <div class="app-content-header">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <h3 class="mb-0">{{ title }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="app-content">
+                <div class="container-fluid">
+                    <!-- Flash Messages -->
+                    <div class="flash-messages">
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                    
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="app-footer d-flex flex-column flex-sm-row justify-content-between align-items-center py-3">
+            <div class="order-2 order-sm-1 mt-2 mt-sm-0 text-center text-sm-start">
+                <strong>Copyright &copy; 2026 DS Consulting.</strong> <span class="d-none d-sm-inline">All rights reserved.</span>
+            </div>
+            <div class="order-1 order-sm-2 d-flex align-items-center justify-content-center">
+                <span class="me-3 text-muted">{{ APP_NAME }}. v{{ APP_VERSION }}</span>
+                <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#sysInfoModal">
+                    <i class="bi bi-info-circle"></i> Info di Sistema
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- System Info Modal -->
+    <div class="modal fade" id="sysInfoModal" tabindex="-1" aria-labelledby="sysInfoModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="sysInfoModalLabel">Informazioni di Sistema</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="sysInfoContent" class="text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Caricamento...</span>
+                </div>
+                <p class="mt-2">Acquisizione dati in corso...</p>
+            </div>
+            <div id="sysInfoData" class="d-none">
+                <ul class="list-group">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        CPU
+                        <span id="cpuData" class="badge bg-primary rounded-pill"></span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Memoria (RAM)
+                        <span id="ramData" class="badge bg-primary rounded-pill"></span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Rete (In/Out)
+                        <span id="netData" class="badge bg-primary rounded-pill"></span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center" id="tempContainer">
+                        Temperature
+                        <span id="tempData" class="badge bg-danger rounded-pill"></span>
+                    </li>
+                </ul>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/admin-lte@4.0.0-beta1/dist/js/adminlte.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/v/bs5/dt-2.0.7/r-3.0.2/datatables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            $('.datatable').DataTable({
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Italian.json"
+                },
+                "responsive": true
+            });
+            
+            // Auto-hide flash messages
+            setTimeout(function() {
+                $('.flash-messages .alert').alert('close');
+            }, 5000);
+
+            // Theme Toggle
+            const themeBtn = $('#btn-toggle-theme');
+            const themeIcon = $('#theme-icon');
+            const htmlElement = $('html');
+            const sidebarElement = $('.app-sidebar');
+
+            function setTheme(theme) {
+                htmlElement.attr('data-bs-theme', theme);
+                if(theme === 'dark') {
+                    themeIcon.removeClass('bi-moon-fill').addClass('bi-sun-fill');
+                    sidebarElement.attr('data-bs-theme', 'dark');
+                } else {
+                    themeIcon.removeClass('bi-sun-fill').addClass('bi-moon-fill');
+                    sidebarElement.attr('data-bs-theme', 'light');
+                }
+                localStorage.setItem('roxysheet-theme', theme);
+            }
+
+            const savedTheme = localStorage.getItem('roxysheet-theme') || 'light';
+            setTheme(savedTheme);
+
+            themeBtn.on('click', function() {
+                const currentTheme = htmlElement.attr('data-bs-theme');
+                setTheme(currentTheme === 'light' ? 'dark' : 'light');
+            });
+
+            // Font Size Toggle
+            let currentFontSize = parseInt(localStorage.getItem('roxysheet-fontsize')) || 20;
+            const rootStyle = document.documentElement.style;
+            
+            function applyFontSize(size) {
+                currentFontSize = size;
+                rootStyle.setProperty('--app-font-size', size + 'px');
+                localStorage.setItem('roxysheet-fontsize', size);
+            }
+            
+            applyFontSize(currentFontSize);
+
+            $('#btn-increase-font').on('click', function() {
+                if(currentFontSize < 30) applyFontSize(currentFontSize + 2);
+            });
+
+            $('#btn-decrease-font').on('click', function() {
+                if(currentFontSize > 14) applyFontSize(currentFontSize - 2);
+            });
+
+            // System Info Modal
+            $('#sysInfoModal').on('show.bs.modal', function () {
+                $('#sysInfoContent').removeClass('d-none');
+                $('#sysInfoData').addClass('d-none');
+
+                $.ajax({
+                    url: '{{ url_for("dashboard.sysinfo") }}',
+                    method: 'GET',
+                    success: function(data) {
+                        $('#cpuData').text(data.cpu.usage + '% (' + data.cpu.cores + ' core)');
+                        $('#ramData').text(data.memory.used_gb + ' GB / ' + data.memory.total_gb + ' GB (' + data.memory.percent + '%)');
+                        $('#netData').text(data.network.recv_mb + ' MB in / ' + data.network.sent_mb + ' MB out');
+                        
+                        if(Object.keys(data.temperatures).length > 0) {
+                            let tStr = [];
+                            for(const [key, vals] of Object.entries(data.temperatures)) {
+                                tStr.push(key + ': ' + vals.join('°C, ') + '°C');
+                            }
+                            $('#tempData').text(tStr.join(' | '));
+                            $('#tempContainer').removeClass('d-none');
+                        } else {
+                            $('#tempContainer').addClass('d-none');
+                        }
+
+                        $('#sysInfoContent').addClass('d-none');
+                        $('#sysInfoData').removeClass('d-none');
+                    },
+                    error: function() {
+                        $('#sysInfoContent').html('<div class="text-danger">Errore nel caricamento dei dati di sistema.</div>');
+                    }
+                });
+            });
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

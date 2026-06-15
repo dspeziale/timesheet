@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card card-primary card-outline">
+    <div class="card-header">
+        <h3 class="card-title">Elenco Clienti</h3>
+        <div class="card-tools">
+            <a href="{{ url_for('customers.add') }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle"></i> Nuovo Cliente
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <table class="table table-bordered table-striped datatable">
+            <thead>
+                <tr>
+                    <th>Ragione Sociale</th>
+                    <th>Partita IVA</th>
+                    <th>Email</th>
+                    <th>Telefono</th>
+                    <th>Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for customer in customers %}
+                <tr>
+                    <td>{{ customer.company_name }}</td>
+                    <td>{{ customer.vat_number or '' }}</td>
+                    <td>{{ customer.email or '' }}</td>
+                    <td>{{ customer.phone or '' }}</td>
+                    <td>
+                        <a href="{{ url_for('customers.edit', id=customer.id) }}" class="btn btn-warning btn-sm">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form action="{{ url_for('customers.delete', id=customer.id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Sei sicuro di voler eliminare questo cliente?');">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

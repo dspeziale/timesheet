@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 text-center">
+        <div class="card card-outline card-primary">
+            <div class="card-header">
+                <h3 class="card-title">Timbratura con QR Code</h3>
+            </div>
+            <div class="card-body">
+                <p>Inquadra questo QR Code con il tuo smartphone per timbrare l'entrata o l'uscita.</p>
+                <div id="qrcode" class="d-flex justify-content-center my-4"></div>
+                <p class="text-muted"><small>Il codice si aggiorna automaticamente ogni 30 secondi.</small></p>
+                
+                <a href="{{ url_for('badge.history') }}" class="btn btn-outline-secondary mt-3">Visualizza Storico Timbrature</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+    let qrcode = new QRCode(document.getElementById("qrcode"), {
+        width: 250,
+        height: 250
+    });
+
+    function updateQRCode() {
+        fetch("{{ url_for('badge.get_token') }}")
+            .then(response => response.json())
+            .then(data => {
+                qrcode.clear();
+                qrcode.makeCode(data.url);
+            })
+            .catch(err => console.error("Errore aggiornamento QR", err));
+    }
+
+    // Aggiorna subito e poi ogni 30 secondi
+    updateQRCode();
+    setInterval(updateQRCode, 30000);
+</script>
+{% endblock %}

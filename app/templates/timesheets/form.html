@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card card-primary card-outline">
+    <div class="card-header">
+        <h3 class="card-title">{{ title }}</h3>
+    </div>
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        {{ form.work_date.label(class="form-label") }}
+                        {{ form.work_date(class="form-control" + (" is-invalid" if form.work_date.errors else ""), type="date") }}
+                        {% for error in form.work_date.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.project_id.label(class="form-label") }}
+                        {{ form.project_id(class="form-select" + (" is-invalid" if form.project_id.errors else "")) }}
+                        {% for error in form.project_id.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.days_worked.label(class="form-label") }}
+                        {{ form.days_worked(class="form-select" + (" is-invalid" if form.days_worked.errors else "")) }}
+                        {% for error in form.days_worked.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        {{ form.activity_select.label(class="form-label text-muted") }}
+                        {{ form.activity_select(class="form-select", id="activitySelect") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.activity_name.label(class="form-label") }}
+                        {{ form.activity_name(class="form-control" + (" is-invalid" if form.activity_name.errors else ""), rows=3, id="activityTextarea") }}
+                        {% for error in form.activity_name.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3 form-check">
+                        {{ form.is_smartworking(class="form-check-input") }}
+                        {{ form.is_smartworking.label(class="form-check-label") }}
+                    </div>
+                    <div class="mb-3 form-check">
+                        {{ form.is_trasferta(class="form-check-input") }}
+                        {{ form.is_trasferta.label(class="form-check-label") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.notes.label(class="form-label") }}
+                        {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=4) }}
+                        {% for error in form.notes.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('timesheets.index') }}" class="btn btn-secondary">Annulla</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const activitySelect = document.getElementById('activitySelect');
+        const activityTextarea = document.getElementById('activityTextarea');
+
+        activitySelect.addEventListener('change', function() {
+            if (this.value) {
+                activityTextarea.value = this.value;
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-3 col-6">
+        <div class="small-box text-bg-primary">
+            <div class="inner">
+                <h3>{{ active_customers }}</h3>
+                <p>Clienti Attivi</p>
+            </div>
+            <div class="small-box-icon">
+                <i class="bi bi-building"></i>
+            </div>
+            <a href="{{ url_for('customers.index') }}" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                Vai <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-6">
+        <div class="small-box text-bg-success">
+            <div class="inner">
+                <h3>{{ active_projects }}</h3>
+                <p>Commesse Attive</p>
+            </div>
+            <div class="small-box-icon">
+                <i class="bi bi-folder"></i>
+            </div>
+            <a href="{{ url_for('projects.index') }}" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                Vai <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-6">
+        <div class="small-box text-bg-warning">
+            <div class="inner">
+                <h3>{{ days_worked }}</h3>
+                <p>Giorni Lavorati (Mese)</p>
+            </div>
+            <div class="small-box-icon">
+                <i class="bi bi-calendar-check"></i>
+            </div>
+            <a href="{{ url_for('timesheets.index') }}" class="small-box-footer link-dark link-underline-opacity-0 link-underline-opacity-50-hover">
+                Vai <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-6">
+        <div class="small-box text-bg-danger">
+            <div class="inner">
+                <h4 class="fw-bold mb-1">€ {{ expected_revenue|format_currency }}</h4>
+                <p class="mb-1">Previsto ({{ working_days_in_month }} gg lavorativi)</p>
+                <div class="border-top border-light opacity-50 my-2"></div>
+                <h5 class="fw-bold mb-0">€ {{ actual_revenue|format_currency }}</h5>
+                <p class="mb-0 small">Fatturabile Vero</p>
+            </div>
+            <div class="small-box-icon">
+                <i class="bi bi-cash"></i>
+            </div>
+            <a href="{{ url_for('reports.monthly') }}" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                Vai <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card card-primary card-outline">
+            <div class="card-header">
+                <h3 class="card-title">Benvenuto nell'applicazione Timesheet</h3>
+            </div>
+            <div class="card-body">
+                <p>Utilizza il menu laterale per navigare tra le funzionalità:</p>
+                <ul>
+                    <li><strong>Anagrafiche</strong>: Gestisci Clienti e Progetti/Commesse.</li>
+                    <li><strong>Operatività</strong>: Registra le tue giornate lavorative nel Timesheet.</li>
+                    <li><strong>Reportistica</strong>: Visualizza i riepiloghi mensili ed esportali in Excel o PDF.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
