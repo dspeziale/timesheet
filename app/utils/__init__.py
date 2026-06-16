@@ -1,0 +1,1 @@
+# Utilità per l'applicazione

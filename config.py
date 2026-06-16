@@ -19,3 +19,14 @@ class Config:
     TAX_ALIQUOTA_INPS = float(os.environ.get('TAX_ALIQUOTA_INPS', 0.2607))
     TAX_ALIQUOTA_IMPOSTA = float(os.environ.get('TAX_ALIQUOTA_IMPOSTA', 0.15))
 
+    # Notifications Configuration
+    TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
+    TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
+
+    MAIL_SERVER = os.environ.get('MAIL_SERVER') or 'smtp.gmail.com'
+    MAIL_PORT = int(os.environ.get('MAIL_PORT') or 465)
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
+    MAIL_DEFAULT_RECIPIENT = os.environ.get('MAIL_DEFAULT_RECIPIENT')
+
