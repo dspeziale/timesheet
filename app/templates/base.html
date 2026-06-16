@@ -100,8 +100,14 @@
                         <li class="nav-header">Operatività</li>
                         <li class="nav-item">
                             <a href="{{ url_for('timesheets.index') }}" class="nav-link">
-                                <i class="nav-icon bi bi-calendar-check"></i>
-                                <p>Timesheet</p>
+                                <i class="nav-icon bi bi-list-check"></i>
+                                <p>Lista Timesheet</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ url_for('timesheets.calendar_view') }}" class="nav-link">
+                                <i class="nav-icon bi bi-calendar3"></i>
+                                <p>Calendario Mensile</p>
                             </a>
                         </li>
                         <li class="nav-header">Reportistica</li>

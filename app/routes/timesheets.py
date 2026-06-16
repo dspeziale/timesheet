@@ -5,6 +5,7 @@ from app.models.timesheet import TimesheetEntry, Activity
 from app.models.project import Project
 from app.forms.timesheet_forms import TimesheetForm
 from datetime import datetime
+import calendar
 
 timesheets_bp = Blueprint('timesheets', __name__, url_prefix='/timesheets')
 
@@ -132,3 +133,35 @@ def edit(id):
     form.activity_select.choices = [('', '--- Scegli una precedente ---')] + [(a.name, a.name[:50] + ('...' if len(a.name)>50 else '')) for a in activities]
         
     return render_template('timesheets/form.html', title='Modifica Timesheet', form=form)
+
+@timesheets_bp.route('/calendar', methods=['GET'])
+@login_required
+def calendar_view():
+    year = request.args.get('year', datetime.now().year, type=int)
+    month = request.args.get('month', datetime.now().month, type=int)
+
+    # Get a matrix representing the calendar month
+    # Each row is a week, each cell is a day number (0 means outside month)
+    # calendar.setfirstweekday(calendar.MONDAY) is the default
+    cal_matrix = calendar.monthcalendar(year, month)
+
+    # Fetch entries for this month
+    timesheets = TimesheetEntry.query.filter(
+        db.extract('year', TimesheetEntry.work_date) == year,
+        db.extract('month', TimesheetEntry.work_date) == month
+    ).order_by(TimesheetEntry.work_date).all()
+
+    # Group entries by day
+    entries_by_day = {}
+    for t in timesheets:
+        day = t.work_date.day
+        if day not in entries_by_day:
+            entries_by_day[day] = []
+        entries_by_day[day].append(t)
+
+    return render_template('timesheets/calendar.html', 
+                           title='Calendario Mensile', 
+                           year=year, 
+                           month=month, 
+                           cal_matrix=cal_matrix, 
+                           entries_by_day=entries_by_day)

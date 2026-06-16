@@ -14,6 +14,9 @@
                 <input type="number" name="year" class="form-control form-control-sm" value="{{ year }}" style="width: 80px;">
                 <button type="submit" class="btn btn-secondary btn-sm">Filtra</button>
             </form>
+            <a href="{{ url_for('timesheets.calendar_view') }}" class="btn btn-outline-primary btn-sm text-nowrap">
+                <i class="bi bi-calendar3"></i> Vista Calendario
+            </a>
             <a href="{{ url_for('timesheets.add') }}" class="btn btn-primary btn-sm text-nowrap">
                 <i class="bi bi-plus-circle"></i> Registra Giornata
             </a>
