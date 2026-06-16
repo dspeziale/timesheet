@@ -8,17 +8,20 @@
             <form method="GET" action="{{ url_for('reports.monthly') }}" class="d-flex gap-2">
                 <select name="month" class="form-select form-select-sm" style="min-width: 60px;">
                     {% for m in range(1, 13) %}
-                    <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}</option>
+                    <option value="{{ m }}" {% if m==month %}selected{% endif %}>{{ m }}</option>
                     {% endfor %}
                 </select>
-                <input type="number" name="year" class="form-control form-control-sm" value="{{ year }}" style="width: 80px;">
+                <input type="number" name="year" class="form-control form-control-sm" value="{{ year }}"
+                    style="width: 80px;">
                 <button type="submit" class="btn btn-secondary btn-sm">Filtra</button>
             </form>
             <div class="d-flex gap-2 mt-2 mt-sm-0">
-                <a href="{{ url_for('reports.export_excel', year=year, month=month) }}" class="btn btn-success btn-sm flex-fill text-nowrap">
+                <a href="{{ url_for('reports.export_excel', year=year, month=month) }}"
+                    class="btn btn-success btn-sm flex-fill text-nowrap">
                     <i class="bi bi-file-earmark-excel"></i> Excel
                 </a>
-                <a href="{{ url_for('reports.export_pdf', year=year, month=month) }}" class="btn btn-danger btn-sm flex-fill text-nowrap">
+                <a href="{{ url_for('reports.export_pdf', year=year, month=month) }}"
+                    class="btn btn-danger btn-sm flex-fill text-nowrap">
                     <i class="bi bi-file-earmark-pdf"></i> PDF
                 </a>
             </div>
@@ -27,43 +30,43 @@
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-bordered table-striped text-nowrap align-middle">
-            <thead>
-                <tr>
-                    <th>Cliente</th>
-                    <th>Commessa</th>
-                    <th>Progetto</th>
-                    <th class="text-end">Giorni</th>
-                    <th class="text-end">Tariffa</th>
-                    <th class="text-end">Totale</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in summary %}
-                <tr>
-                    <td>{{ item.customer.company_name }}</td>
-                    <td>{{ item.project.code }}</td>
-                    <td>{{ item.project.name }}</td>
-                    <td class="text-end">{{ item.days }}</td>
-                    <td class="text-end">€ {{ item.rate|format_currency }}</td>
-                    <td class="text-end">€ {{ item.total|format_currency }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="6" class="text-center">Nessun dato presente per questo mese.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-            <tfoot>
-                <tr class="table-primary fw-bold">
-                    <td colspan="5" class="text-end">TOTALE GENERALE:</td>
-                    <td class="text-end">€ {{ total_general|format_currency }}</td>
-                </tr>
-                <tr class="table-success fw-bold">
-                    <td colspan="5" class="text-end">TOTALE NETTO (-27%):</td>
-                    <td class="text-end">€ {{ total_net|format_currency }}</td>
-                </tr>
-            </tfoot>
-        </table>
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Commessa</th>
+                        <th>Progetto</th>
+                        <th class="text-end">Giorni</th>
+                        <th class="text-end">Tariffa</th>
+                        <th class="text-end">Totale</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in summary %}
+                    <tr>
+                        <td>{{ item.customer.company_name }}</td>
+                        <td>{{ item.project.code }}</td>
+                        <td>{{ item.project.name }}</td>
+                        <td class="text-end">{{ item.days }}</td>
+                        <td class="text-end">€ {{ item.rate|format_currency }}</td>
+                        <td class="text-end">€ {{ item.total|format_currency }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">Nessun dato presente per questo mese.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="table-primary fw-bold">
+                        <td colspan="5" class="text-end">TOTALE GENERALE:</td>
+                        <td class="text-end">€ {{ total_general|format_currency }}</td>
+                    </tr>
+                    <tr class="table-success fw-bold">
+                        <td colspan="5" class="text-end">TOTALE NETTO (-27%):</td>
+                        <td class="text-end">€ {{ total_net|format_currency }}</td>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
     </div>
 </div>
@@ -84,22 +87,26 @@
                     </tr>
                     <tr>
                         <td class="w-50">Fatturato mensile lordo</td>
-                        <td class="text-end fw-bold text-primary w-25" style="background-color: #fff3cd;">€ {{ total_general|format_currency }}</td>
+                        <td class="text-end fw-bold text-primary w-25" style="background-color: #fff3cd;">€ {{
+                            total_general|format_currency }}</td>
                         <td class="text-muted small w-25"></td>
                     </tr>
                     <tr>
                         <td>Coefficiente di redditività</td>
-                        <td class="text-end text-primary fw-bold">{{ (tax_simulator.coeff_redditivita * 100)|round(0)|int }}%</td>
+                        <td class="text-end text-primary fw-bold">{{ (tax_simulator.coeff_redditivita *
+                            100)|round(0)|int }}%</td>
                         <td class="text-muted small" style="font-style: italic;">Fisso per ATECO 62.02.00</td>
                     </tr>
                     <tr>
                         <td>Aliquota INPS Gestione Separata</td>
-                        <td class="text-end text-primary fw-bold">{{ (tax_simulator.aliquota_inps * 100)|round(2) }}%</td>
+                        <td class="text-end text-primary fw-bold">{{ (tax_simulator.aliquota_inps * 100)|round(2) }}%
+                        </td>
                         <td class="text-muted small" style="font-style: italic;">Aliquota 2025</td>
                     </tr>
                     <tr>
                         <td>Aliquota imposta sostitutiva</td>
-                        <td class="text-end text-primary fw-bold">{{ (tax_simulator.aliquota_imposta * 100)|round(1) }}%</td>
+                        <td class="text-end text-primary fw-bold">{{ (tax_simulator.aliquota_imposta * 100)|round(1) }}%
+                        </td>
                         <td class="text-muted small" style="font-style: italic;">Ordinaria 15%</td>
                     </tr>
 
@@ -165,12 +172,12 @@
                     <tr style="background-color: #e2efda;">
                         <td>– Imposta sostitutiva</td>
                         <td class="text-end">-€ {{ tax_simulator.imposta_sostitutiva|format_currency }}</td>
-                        <td class="text-end">mensile</td>
+                        <!-- <td class="text-end">mensile</td> -->
                     </tr>
                     <tr class="fw-bold fs-5" style="background-color: #c6e0b4;">
                         <td class="text-success">NETTO IN TASCA</td>
                         <td class="text-end text-success">€ {{ tax_simulator.netto_in_tasca|format_currency }}</td>
-                        <td class="text-end text-success">€ {{ tax_simulator.netto_in_tasca|format_currency }}</td>
+                        <!-- <td class="text-end text-success">€ {{ tax_simulator.netto_in_tasca|format_currency }}</td> -->
                     </tr>
                 </tbody>
             </table>

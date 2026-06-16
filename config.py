@@ -13,3 +13,9 @@ class Config:
     
     APP_NAME = os.environ.get('APP_NAME') or 'RoxySheet'
     APP_VERSION = os.environ.get('APP_VERSION') or '1.1.4'
+    
+    # Regime Forfettario Tax Variables
+    TAX_COEFF_REDDITIVITA = float(os.environ.get('TAX_COEFF_REDDITIVITA', 0.67))
+    TAX_ALIQUOTA_INPS = float(os.environ.get('TAX_ALIQUOTA_INPS', 0.2623))
+    TAX_ALIQUOTA_IMPOSTA = float(os.environ.get('TAX_ALIQUOTA_IMPOSTA', 0.15))
+

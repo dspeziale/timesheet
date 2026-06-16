@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, Response, send_file
+from flask import Blueprint, render_template, request, Response, send_file, current_app
 from flask_login import login_required
 from app import db
 from app.models.timesheet import TimesheetEntry
@@ -42,9 +42,9 @@ def monthly():
     total_net = total_general * 0.73
 
     # Simulatore Fiscale - Regime Forfettario
-    coeff_redditivita = 0.67
-    aliquota_inps = 0.2623
-    aliquota_imposta = 0.15
+    coeff_redditivita = current_app.config.get('TAX_COEFF_REDDITIVITA', 0.67)
+    aliquota_inps = current_app.config.get('TAX_ALIQUOTA_INPS', 0.2623)
+    aliquota_imposta = current_app.config.get('TAX_ALIQUOTA_IMPOSTA', 0.15)
 
     reddito_imponibile_lordo = total_general * coeff_redditivita
     contributi_inps = reddito_imponibile_lordo * aliquota_inps
