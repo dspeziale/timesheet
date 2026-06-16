@@ -41,13 +41,38 @@ def monthly():
 
     total_net = total_general * 0.73
 
+    # Simulatore Fiscale - Regime Forfettario
+    coeff_redditivita = 0.67
+    aliquota_inps = 0.2623
+    aliquota_imposta = 0.15
+
+    reddito_imponibile_lordo = total_general * coeff_redditivita
+    contributi_inps = reddito_imponibile_lordo * aliquota_inps
+    reddito_imponibile_fiscale = reddito_imponibile_lordo - contributi_inps
+    imposta_sostitutiva = reddito_imponibile_fiscale * aliquota_imposta
+    totale_da_pagare = contributi_inps + imposta_sostitutiva
+    netto_in_tasca = total_general - contributi_inps - imposta_sostitutiva
+
+    tax_simulator = {
+        'coeff_redditivita': coeff_redditivita,
+        'aliquota_inps': aliquota_inps,
+        'aliquota_imposta': aliquota_imposta,
+        'reddito_imponibile_lordo': reddito_imponibile_lordo,
+        'contributi_inps': contributi_inps,
+        'reddito_imponibile_fiscale': reddito_imponibile_fiscale,
+        'imposta_sostitutiva': imposta_sostitutiva,
+        'totale_da_pagare': totale_da_pagare,
+        'netto_in_tasca': netto_in_tasca
+    }
+
     return render_template('reports/monthly.html', 
                            title='Riepilogo Mensile', 
                            summary=summary.values(), 
                            year=year, 
                            month=month,
                            total_general=total_general,
-                           total_net=total_net)
+                           total_net=total_net,
+                           tax_simulator=tax_simulator)
 
 @reports_bp.route('/export_excel', methods=['GET'])
 @login_required

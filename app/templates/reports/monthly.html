@@ -67,4 +67,115 @@
         </div>
     </div>
 </div>
+
+{% if summary %}
+<div class="card card-primary card-outline mt-4 border-primary">
+    <div class="card-header text-white bg-primary text-center">
+        <h3 class="card-title mb-0 w-100 fs-4 fw-bold">REGIME FORFETTARIO – SIMULATORE FISCALE</h3>
+        <small class="d-block mt-1" style="font-style: italic;">ATECO 62.02.00 – Consulenza informatica</small>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered mb-0 align-middle">
+                <tbody>
+                    <!-- Dati di input -->
+                    <tr class="text-white fw-bold" style="background-color: #0d6efd;">
+                        <td colspan="3"><i class="bi bi-box-arrow-in-right"></i> DATI DI INPUT</td>
+                    </tr>
+                    <tr>
+                        <td class="w-50">Fatturato mensile lordo</td>
+                        <td class="text-end fw-bold text-primary w-25" style="background-color: #fff3cd;">€ {{ total_general|format_currency }}</td>
+                        <td class="text-muted small w-25"></td>
+                    </tr>
+                    <tr>
+                        <td>Coefficiente di redditività</td>
+                        <td class="text-end text-primary fw-bold">{{ (tax_simulator.coeff_redditivita * 100)|round(0)|int }}%</td>
+                        <td class="text-muted small" style="font-style: italic;">Fisso per ATECO 62.02.00</td>
+                    </tr>
+                    <tr>
+                        <td>Aliquota INPS Gestione Separata</td>
+                        <td class="text-end text-primary fw-bold">{{ (tax_simulator.aliquota_inps * 100)|round(2) }}%</td>
+                        <td class="text-muted small" style="font-style: italic;">Aliquota 2025</td>
+                    </tr>
+                    <tr>
+                        <td>Aliquota imposta sostitutiva</td>
+                        <td class="text-end text-primary fw-bold">{{ (tax_simulator.aliquota_imposta * 100)|round(1) }}%</td>
+                        <td class="text-muted small" style="font-style: italic;">Ordinaria 15%</td>
+                    </tr>
+
+                    <!-- Calcoli intermedi -->
+                    <tr class="text-white fw-bold" style="background-color: #0d6efd;">
+                        <td colspan="3"><i class="bi bi-calculator"></i> CALCOLI INTERMEDI</td>
+                    </tr>
+                    <tr>
+                        <td>Reddito imponibile lordo</td>
+                        <td class="text-end">€ {{ tax_simulator.reddito_imponibile_lordo|format_currency }}</td>
+                        <td class="text-muted small" style="font-style: italic;">Fatturato × Coefficiente</td>
+                    </tr>
+                    <tr>
+                        <td>Contributi INPS</td>
+                        <td class="text-end">€ {{ tax_simulator.contributi_inps|format_currency }}</td>
+                        <td class="text-muted small" style="font-style: italic;">Reddito lordo × Aliquota INPS</td>
+                    </tr>
+                    <tr>
+                        <td>Reddito imponibile fiscale</td>
+                        <td class="text-end">€ {{ tax_simulator.reddito_imponibile_fiscale|format_currency }}</td>
+                        <td class="text-muted small" style="font-style: italic;">Reddito lordo - Contributi INPS</td>
+                    </tr>
+                    <tr>
+                        <td>Imposta sostitutiva</td>
+                        <td class="text-end">€ {{ tax_simulator.imposta_sostitutiva|format_currency }}</td>
+                        <td class="text-muted small" style="font-style: italic;">Reddito fiscale × Aliquota imp.</td>
+                    </tr>
+
+                    <!-- Riepilogo cosa paghi -->
+                    <tr class="fw-bold" style="background-color: #001f3f; color: white;">
+                        <td colspan="3"><i class="bi bi-layout-text-sidebar-reverse"></i> RIEPILOGO – COSA PAGHI</td>
+                    </tr>
+                    <tr style="background-color: #fce4d6;">
+                        <td>Contributi INPS</td>
+                        <td class="text-end fw-bold">€ {{ tax_simulator.contributi_inps|format_currency }}</td>
+                        <td></td>
+                    </tr>
+                    <tr style="background-color: #fce4d6;">
+                        <td>Imposta sostitutiva</td>
+                        <td class="text-end fw-bold">€ {{ tax_simulator.imposta_sostitutiva|format_currency }}</td>
+                        <td class="text-end fw-bold">€ {{ tax_simulator.totale_da_pagare|format_currency }}</td>
+                    </tr>
+                    <tr class="fw-bold fs-5" style="background-color: #001f3f; color: white;">
+                        <td>TOTALE DA PAGARE (VERSARE)</td>
+                        <td class="text-end">€ {{ tax_simulator.totale_da_pagare|format_currency }}</td>
+                        <td class="text-end">€ {{ tax_simulator.totale_da_pagare|format_currency }}</td>
+                    </tr>
+
+                    <!-- Netto in tasca -->
+                    <tr class="fw-bold" style="background-color: #385723; color: white;">
+                        <td colspan="3"><i class="bi bi-cash-stack"></i> NETTO IN TASCA</td>
+                    </tr>
+                    <tr style="background-color: #e2efda;">
+                        <td>Fatturato lordo</td>
+                        <td class="text-end">€ {{ total_general|format_currency }}</td>
+                        <td></td>
+                    </tr>
+                    <tr style="background-color: #e2efda;">
+                        <td>– Contributi INPS</td>
+                        <td class="text-end">-€ {{ tax_simulator.contributi_inps|format_currency }}</td>
+                        <td></td>
+                    </tr>
+                    <tr style="background-color: #e2efda;">
+                        <td>– Imposta sostitutiva</td>
+                        <td class="text-end">-€ {{ tax_simulator.imposta_sostitutiva|format_currency }}</td>
+                        <td class="text-end">mensile</td>
+                    </tr>
+                    <tr class="fw-bold fs-5" style="background-color: #c6e0b4;">
+                        <td class="text-success">NETTO IN TASCA</td>
+                        <td class="text-end text-success">€ {{ tax_simulator.netto_in_tasca|format_currency }}</td>
+                        <td class="text-end text-success">€ {{ tax_simulator.netto_in_tasca|format_currency }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
