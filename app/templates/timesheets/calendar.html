@@ -57,6 +57,47 @@
         right: 5px;
         font-size: 0.8em;
     }
+
+    /* Mobile Responsive Calendar */
+    @media (max-width: 767.98px) {
+        .calendar-grid, .calendar-grid tbody, .calendar-grid tr, .calendar-grid td {
+            display: block;
+            width: 100%;
+        }
+        .calendar-grid thead {
+            display: none;
+        }
+        .calendar-grid td {
+            height: auto;
+            min-height: 80px;
+            margin-bottom: 15px;
+            border: 1px solid var(--bs-border-color) !important;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .calendar-grid td.empty {
+            display: none;
+        }
+        .calendar-grid .day-number {
+            float: none;
+            text-align: left;
+            border-bottom: 1px solid var(--bs-border-color-translucent);
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+        .mobile-day-name {
+            display: inline-block;
+            font-weight: normal;
+            font-size: 0.9em;
+            color: var(--bs-secondary);
+            margin-right: 5px;
+        }
+    }
+    @media (min-width: 768px) {
+        .mobile-day-name {
+            display: none;
+        }
+    }
 </style>
 
 <div class="card card-primary card-outline">
@@ -95,6 +136,7 @@
                     </tr>
                 </thead>
                 <tbody>
+                    {% set day_names = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato', 'Domenica'] %}
                     {% for week in cal_matrix %}
                     <tr>
                         {% for day in week %}
@@ -103,7 +145,9 @@
                             {% else %}
                                 {% set is_weekend = (loop.index0 == 5 or loop.index0 == 6) %}
                                 <td class="{% if is_weekend %}weekend{% endif %}">
-                                    <div class="day-number">{{ day }}</div>
+                                    <div class="day-number">
+                                        <span class="mobile-day-name">{{ day_names[loop.index0] }}</span>{{ day }}
+                                    </div>
                                     <div class="clearfix"></div>
                                     
                                     {% if day in entries_by_day %}
