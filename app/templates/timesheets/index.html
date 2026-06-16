@@ -2,10 +2,19 @@
 
 {% block content %}
 <div class="card card-primary card-outline">
-    <div class="card-header">
-        <h3 class="card-title">Timesheet</h3>
-        <div class="card-tools">
-            <a href="{{ url_for('timesheets.add') }}" class="btn btn-primary btn-sm">
+    <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <h3 class="card-title mb-0">Timesheet</h3>
+        <div class="d-flex flex-wrap gap-2 justify-content-md-end align-items-center">
+            <form method="GET" action="{{ url_for('timesheets.index') }}" class="d-flex gap-2 mb-0">
+                <select name="month" class="form-select form-select-sm" style="min-width: 60px;">
+                    {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}</option>
+                    {% endfor %}
+                </select>
+                <input type="number" name="year" class="form-control form-control-sm" value="{{ year }}" style="width: 80px;">
+                <button type="submit" class="btn btn-secondary btn-sm">Filtra</button>
+            </form>
+            <a href="{{ url_for('timesheets.add') }}" class="btn btn-primary btn-sm text-nowrap">
                 <i class="bi bi-plus-circle"></i> Registra Giornata
             </a>
         </div>

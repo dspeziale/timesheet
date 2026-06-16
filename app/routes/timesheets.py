@@ -11,8 +11,15 @@ timesheets_bp = Blueprint('timesheets', __name__, url_prefix='/timesheets')
 @timesheets_bp.route('/')
 @login_required
 def index():
-    timesheets = TimesheetEntry.query.order_by(TimesheetEntry.work_date.desc()).all()
-    return render_template('timesheets/index.html', title='Timesheet', timesheets=timesheets)
+    year = request.args.get('year', datetime.now().year, type=int)
+    month = request.args.get('month', datetime.now().month, type=int)
+
+    timesheets = TimesheetEntry.query.filter(
+        db.extract('year', TimesheetEntry.work_date) == year,
+        db.extract('month', TimesheetEntry.work_date) == month
+    ).order_by(TimesheetEntry.work_date.desc()).all()
+    
+    return render_template('timesheets/index.html', title='Timesheet', timesheets=timesheets, year=year, month=month)
 
 @timesheets_bp.route('/add', methods=['GET', 'POST'])
 @login_required
