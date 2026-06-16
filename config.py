@@ -16,6 +16,6 @@ class Config:
     
     # Regime Forfettario Tax Variables
     TAX_COEFF_REDDITIVITA = float(os.environ.get('TAX_COEFF_REDDITIVITA', 0.67))
-    TAX_ALIQUOTA_INPS = float(os.environ.get('TAX_ALIQUOTA_INPS', 0.2623))
+    TAX_ALIQUOTA_INPS = float(os.environ.get('TAX_ALIQUOTA_INPS', 0.2607))
     TAX_ALIQUOTA_IMPOSTA = float(os.environ.get('TAX_ALIQUOTA_IMPOSTA', 0.15))
 
