@@ -86,9 +86,10 @@
             }
         });
 
-        // Ferie annulla tutti gli altri campi
+        // Ferie annulla tutti gli altri campi ed è sempre una giornata intera
         const isFerie = document.getElementById('isFerie');
         const projectSelect = document.getElementById('project_id');
+        const daysWorked = document.getElementById('days_worked');
         const smartworking = document.getElementById('is_smartworking');
         const trasferta = document.getElementById('is_trasferta');
 
@@ -105,10 +106,27 @@
                     }
                 }
             });
+            // Le ferie sono sempre 1.0 giornata
+            if (daysWorked) {
+                if (ferie) {
+                    daysWorked.value = '1.0';
+                }
+                daysWorked.disabled = ferie;
+            }
         }
 
         isFerie.addEventListener('change', applyFerieState);
         applyFerieState();
+
+        // Riabilita i campi disabilitati al submit così i valori vengono inviati
+        const ferieForm = isFerie.closest('form');
+        if (ferieForm) {
+            ferieForm.addEventListener('submit', function() {
+                [projectSelect, activitySelect, activityTextarea, smartworking, trasferta, daysWorked].forEach(function(el) {
+                    if (el) el.disabled = false;
+                });
+            });
+        }
     });
 </script>
 {% endblock %}

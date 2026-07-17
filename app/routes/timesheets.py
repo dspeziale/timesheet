@@ -30,8 +30,9 @@ def add():
     if form.validate_on_submit():
         # Check max 1.0 day per date
         work_date = form.work_date.data
-        days_to_add = float(form.days_worked.data)
         is_ferie = form.is_ferie.data
+        days_value = '1.0' if is_ferie else form.days_worked.data  # le ferie sono sempre 1 giornata
+        days_to_add = float(days_value)
 
         existing_entries = TimesheetEntry.query.filter_by(work_date=work_date).all()
         current_total = sum(float(e.days_worked) for e in existing_entries)
@@ -62,7 +63,7 @@ def add():
         entry = TimesheetEntry(
             work_date=work_date,
             project_id=project_id,
-            days_worked=form.days_worked.data,
+            days_worked=days_value,
             activity_id=activity_id,
             is_smartworking=False if is_ferie else form.is_smartworking.data,
             is_trasferta=False if is_ferie else form.is_trasferta.data,
@@ -100,8 +101,9 @@ def edit(id):
     
     if form.validate_on_submit():
         work_date = form.work_date.data
-        days_to_add = float(form.days_worked.data)
         is_ferie = form.is_ferie.data
+        days_value = '1.0' if is_ferie else form.days_worked.data  # le ferie sono sempre 1 giornata
+        days_to_add = float(days_value)
 
         # Check max 1.0 day per date excluding current entry
         existing_entries = TimesheetEntry.query.filter(
@@ -137,7 +139,7 @@ def edit(id):
 
         entry.work_date = work_date
         entry.project_id = project_id
-        entry.days_worked = form.days_worked.data
+        entry.days_worked = days_value
         entry.activity_id = activity_id
         entry.is_smartworking = False if is_ferie else form.is_smartworking.data
         entry.is_trasferta = False if is_ferie else form.is_trasferta.data
