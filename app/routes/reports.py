@@ -25,16 +25,18 @@ def _weekdays_between(start, end):
     return count
 
 
-def _billable_days_for_weeks(week_mondays, project):
-    """Giorni fatturabili date le settimane lavorate (lunedi di ciascuna),
-    ogni settimana vale 5 giorni feriali ma proratati sull'inizio/fine commessa."""
+def _billable_days_for_weeks(week_mondays, project, month_start, month_end):
+    """Giorni fatturabili date le settimane lavorate (lunedi di ciascuna).
+    Ogni settimana vale 5 giorni feriali (Lun-Ven), proratati sull'inizio/fine
+    commessa e ritagliati ai confini del mese selezionato (le settimane a cavallo
+    non sconfinano nel mese precedente/successivo)."""
     total = 0
     for monday in week_mondays:
         friday = monday + timedelta(days=4)
-        eff_start = monday
+        eff_start = max(monday, month_start)
         if project.start_date and project.start_date > eff_start:
             eff_start = project.start_date
-        eff_end = friday
+        eff_end = min(friday, month_end)
         if project.end_date and project.end_date < eff_end:
             eff_end = project.end_date
         total += _weekdays_between(eff_start, eff_end)
@@ -70,11 +72,13 @@ def monthly():
             }
         summary[pid]['mondays'].add(monday)
 
+    month_start = datetime(year, month, 1).date()
+    month_end = datetime(year, month, calendar.monthrange(year, month)[1]).date()
     summary = list(summary.values())
     total_general = 0
     for item in summary:
         item['weeks_worked'] = len(item['mondays'])
-        item['days'] = _billable_days_for_weeks(item['mondays'], item['project'])
+        item['days'] = _billable_days_for_weeks(item['mondays'], item['project'], month_start, month_end)
         item['total'] = item['days'] * float(item['rate'])
         total_general += item['total']
     summary.sort(key=lambda x: x['project'].name)
@@ -191,11 +195,13 @@ def export_pdf():
             }
         summary[pid]['mondays'].add(monday)
 
+    month_start = datetime(year, month, 1).date()
+    month_end = datetime(year, month, calendar.monthrange(year, month)[1]).date()
     summary = list(summary.values())
     total_general = 0
     for item in summary:
         item['weeks_worked'] = len(item['mondays'])
-        item['days'] = _billable_days_for_weeks(item['mondays'], item['project'])
+        item['days'] = _billable_days_for_weeks(item['mondays'], item['project'], month_start, month_end)
         item['total'] = item['days'] * float(item['rate'])
         total_general += item['total']
     summary.sort(key=lambda x: x['project'].name)
