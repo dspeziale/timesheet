@@ -190,8 +190,35 @@ def export_pdf_week():
 
     total_days = sum(w['days'] for w in weeks_list)
 
+    # Riepilogo per progetto conteggiando le settimane lavorate
+    # (una settimana conta se lavorata almeno un giorno)
+    project_summary = {}
+    for t in timesheets:
+        pid = t.project_id
+        iso_week_key = t.work_date.isocalendar()[:2]  # (iso_year, iso_week)
+        if pid not in project_summary:
+            project_summary[pid] = {
+                'project': t.project,
+                'customer': t.project.customer,
+                'weeks': set()
+            }
+        project_summary[pid]['weeks'].add(iso_week_key)
+
+    project_list = []
+    for item in project_summary.values():
+        project_list.append({
+            'project': item['project'],
+            'customer': item['customer'],
+            'weeks_worked': len(item['weeks'])
+        })
+    project_list.sort(key=lambda x: x['project'].name)
+
+    total_weeks = len(weeks_list)
+
     return render_template('reports/pdf_week_template.html',
                            weeks=weeks_list,
                            year=year,
                            month=month,
-                           total_days=total_days)
+                           total_days=total_days,
+                           project_summary=project_list,
+                           total_weeks=total_weeks)

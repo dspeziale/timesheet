@@ -45,6 +45,39 @@
 <body>
     <h1>Report Settimanale - {{ month }}/{{ year }}</h1>
 
+    <h3>Riepilogo per Progetto (settimane lavorate)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Cliente</th>
+                <th>Commessa</th>
+                <th>Progetto</th>
+                <th class="text-end">Settimane lavorate</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in project_summary %}
+            <tr>
+                <td>{{ item.customer.company_name }}</td>
+                <td>{{ item.project.code }}</td>
+                <td>{{ item.project.name }}</td>
+                <td class="text-end">{{ item.weeks_worked }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="text-end">Nessun dato presente per questo mese.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3" class="text-end fw-bold">SETTIMANE TOTALI DEL MESE:</td>
+                <td class="text-end fw-bold">{{ total_weeks }}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <h3 style="margin-top: 40px;">Dettaglio Settimanale</h3>
     <table>
         <thead>
             <tr>
