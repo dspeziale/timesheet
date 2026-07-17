@@ -4,7 +4,7 @@ from app import db
 from app.models.timesheet import TimesheetEntry
 from app.models.project import Project
 from app.models.customer import Customer
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 import io
 
@@ -141,10 +141,57 @@ def export_pdf():
 
     # Invece di generare il PDF lato server (che richiede pycairo non compatibile con Vercel),
     # restituiamo un template HTML minimale con window.print()
-    return render_template('reports/pdf_template.html', 
+    return render_template('reports/pdf_template.html',
                            timesheets=timesheets,
-                           summary=summary.values(), 
-                           year=year, 
+                           summary=summary.values(),
+                           year=year,
                            month=month,
                            total_general=total_general,
                            total_net=total_net)
+
+@reports_bp.route('/export_pdf_week', methods=['GET'])
+@login_required
+def export_pdf_week():
+    year = request.args.get('year', datetime.now().year, type=int)
+    month = request.args.get('month', datetime.now().month, type=int)
+
+    timesheets = TimesheetEntry.query.filter(
+        db.extract('year', TimesheetEntry.work_date) == year,
+        db.extract('month', TimesheetEntry.work_date) == month
+    ).order_by(TimesheetEntry.work_date).all()
+
+    # Aggrega per settimana (ISO): una riga per settimana con le attività distinte
+    weeks = {}
+    for t in timesheets:
+        iso_year, iso_week, _ = t.work_date.isocalendar()
+        key = (iso_year, iso_week)
+        if key not in weeks:
+            monday = t.work_date - timedelta(days=t.work_date.weekday())
+            sunday = monday + timedelta(days=6)
+            weeks[key] = {
+                'week_num': iso_week,
+                'start': monday,
+                'end': sunday,
+                'days': 0,
+                'activities': []  # mantiene l'ordine, distinte
+            }
+        w = weeks[key]
+        w['days'] += float(t.days_worked)
+        if t.activity and t.activity.name:
+            name = t.activity.name.strip()
+            if name and name not in w['activities']:
+                w['activities'].append(name)
+
+    weeks_list = []
+    for key in sorted(weeks.keys()):
+        w = weeks[key]
+        w['activities_str'] = ', '.join(w['activities'])
+        weeks_list.append(w)
+
+    total_days = sum(w['days'] for w in weeks_list)
+
+    return render_template('reports/pdf_week_template.html',
+                           weeks=weeks_list,
+                           year=year,
+                           month=month,
+                           total_days=total_days)

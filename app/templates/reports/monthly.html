@@ -24,6 +24,10 @@
                     class="btn btn-danger btn-sm flex-fill text-nowrap">
                     <i class="bi bi-file-earmark-pdf"></i> PDF
                 </a>
+                <a href="{{ url_for('reports.export_pdf_week', year=year, month=month) }}"
+                    class="btn btn-danger btn-sm flex-fill text-nowrap">
+                    <i class="bi bi-file-earmark-pdf"></i> PDF Week
+                </a>
             </div>
         </div>
     </div>
