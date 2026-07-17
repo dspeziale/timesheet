@@ -42,6 +42,46 @@ def _billable_days_span(last_worked, project, month_start, month_end, ferie_entr
                 days -= fdays
     return max(days, 0)
 
+
+def _group_by_customer(projects):
+    """Raggruppa le voci per progetto in una riga per cliente, sommando giorni e
+    totali. Codici commessa e nomi progetto vengono concatenati; la tariffa e'
+    mostrata solo se unica tra i progetti del cliente, altrimenti None."""
+    by_customer = {}
+    for it in projects:
+        cid = it['customer'].id
+        if cid not in by_customer:
+            by_customer[cid] = {
+                'customer': it['customer'],
+                'mondays': set(),
+                'days': 0,
+                'total': 0,
+                'codes': [],
+                'names': [],
+                'rates': set(),
+            }
+        g = by_customer[cid]
+        g['mondays'] |= it['mondays']
+        g['days'] += it['days']
+        g['total'] += it['total']
+        g['codes'].append(it['project'].code)
+        g['names'].append(it['project'].name)
+        g['rates'].add(float(it['rate']))
+
+    rows = []
+    for g in by_customer.values():
+        rows.append({
+            'customer': g['customer'],
+            'code': ', '.join(g['codes']),
+            'name': ', '.join(g['names']),
+            'weeks_worked': len(g['mondays']),
+            'days': g['days'],
+            'total': g['total'],
+            'rate': (next(iter(g['rates'])) if len(g['rates']) == 1 else None),
+        })
+    rows.sort(key=lambda x: x['customer'].company_name)
+    return rows
+
 @reports_bp.route('/monthly', methods=['GET'])
 @login_required
 def monthly():
@@ -77,14 +117,13 @@ def monthly():
     month_start = datetime(year, month, 1).date()
     month_end = datetime(year, month, calendar.monthrange(year, month)[1]).date()
     ferie_entries = [(t.work_date, float(t.days_worked)) for t in timesheets if t.is_ferie]
-    summary = list(summary.values())
-    total_general = 0
-    for item in summary:
-        item['weeks_worked'] = len(item['mondays'])
+    projects = list(summary.values())
+    for item in projects:
         item['days'] = _billable_days_span(item['last_worked'], item['project'], month_start, month_end, ferie_entries)
         item['total'] = item['days'] * float(item['rate'])
-        total_general += item['total']
-    summary.sort(key=lambda x: x['project'].name)
+
+    summary = _group_by_customer(projects)
+    total_general = sum(item['total'] for item in summary)
 
     total_net = total_general * 0.73
 
@@ -204,14 +243,13 @@ def export_pdf():
     month_start = datetime(year, month, 1).date()
     month_end = datetime(year, month, calendar.monthrange(year, month)[1]).date()
     ferie_entries = [(t.work_date, float(t.days_worked)) for t in timesheets if t.is_ferie]
-    summary = list(summary.values())
-    total_general = 0
-    for item in summary:
-        item['weeks_worked'] = len(item['mondays'])
+    projects = list(summary.values())
+    for item in projects:
         item['days'] = _billable_days_span(item['last_worked'], item['project'], month_start, month_end, ferie_entries)
         item['total'] = item['days'] * float(item['rate'])
-        total_general += item['total']
-    summary.sort(key=lambda x: x['project'].name)
+
+    summary = _group_by_customer(projects)
+    total_general = sum(item['total'] for item in summary)
 
     total_net = total_general * 0.73
 

@@ -65,11 +65,11 @@
             {% for item in summary %}
             <tr>
                 <td>{{ item.customer.company_name }}</td>
-                <td>{{ item.project.code }}</td>
-                <td>{{ item.project.name }}</td>
+                <td>{{ item.code }}</td>
+                <td>{{ item.name }}</td>
                 <td class="text-end">{{ item.weeks_worked }}</td>
                 <td class="text-end">{{ item.days }}</td>
-                <td class="text-end">€ {{ item.rate|format_currency }}</td>
+                <td class="text-end">{% if item.rate is not none %}€ {{ item.rate|format_currency }}{% else %}-{% endif %}</td>
                 <td class="text-end">€ {{ item.total|format_currency }}</td>
             </tr>
             {% endfor %}

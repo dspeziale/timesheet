@@ -10,6 +10,14 @@ class Config:
         
     SQLALCHEMY_DATABASE_URI = db_url or 'sqlite:///' + os.path.join(basedir, 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Robustezza connessione DB su ambienti serverless (Vercel + Neon/Postgres):
+    # verifica la connessione prima dell'uso e ricicla quelle vecchie, evitando
+    # "SSL connection has been closed unexpectedly" su connessioni chiuse per inattivita'.
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 280,
+    }
     
     APP_NAME = os.environ.get('APP_NAME') or 'RoxySheet'
     APP_VERSION = os.environ.get('APP_VERSION') or '1.1.7'
