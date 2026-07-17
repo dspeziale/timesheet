@@ -39,6 +39,10 @@
         .fw-bold {
             font-weight: bold;
         }
+
+        .text-nowrap {
+            white-space: nowrap;
+        }
     </style>
 </head>
 
@@ -81,33 +85,24 @@
     <table>
         <thead>
             <tr>
-                <th>Settimana</th>
-                <th>Periodo</th>
-                <th class="text-end">Giornate</th>
+                <th class="text-nowrap">Settimana</th>
+                <th class="text-nowrap">Periodo</th>
                 <th>Attività</th>
             </tr>
         </thead>
         <tbody>
             {% for w in weeks %}
             <tr>
-                <td>Settimana {{ w.week_num }}</td>
-                <td>{{ w.start.strftime('%d/%m/%Y') }} - {{ w.end.strftime('%d/%m/%Y') }}</td>
-                <td class="text-end">{{ w.days }}</td>
+                <td class="text-nowrap">Settimana {{ w.week_num }}</td>
+                <td class="text-nowrap">{{ w.start.strftime('%d/%m/%Y') }} - {{ w.end.strftime('%d/%m/%Y') }}</td>
                 <td>{{ w.activities_str }}</td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="4" class="text-end">Nessun dato presente per questo mese.</td>
+                <td colspan="3" class="text-end">Nessun dato presente per questo mese.</td>
             </tr>
             {% endfor %}
         </tbody>
-        <tfoot>
-            <tr>
-                <td colspan="2" class="text-end fw-bold">TOTALE GIORNATE:</td>
-                <td class="text-end fw-bold">{{ total_days }}</td>
-                <td></td>
-            </tr>
-        </tfoot>
     </table>
     <script>
         window.onload = function () {
