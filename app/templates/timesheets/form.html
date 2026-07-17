@@ -45,6 +45,10 @@
                         {% endfor %}
                     </div>
                     <div class="mb-3 form-check">
+                        {{ form.is_ferie(class="form-check-input", id="isFerie") }}
+                        {{ form.is_ferie.label(class="form-check-label fw-bold text-success") }}
+                    </div>
+                    <div class="mb-3 form-check">
                         {{ form.is_smartworking(class="form-check-input") }}
                         {{ form.is_smartworking.label(class="form-check-label") }}
                     </div>
@@ -81,6 +85,30 @@
                 activityTextarea.value = this.value;
             }
         });
+
+        // Ferie annulla tutti gli altri campi
+        const isFerie = document.getElementById('isFerie');
+        const projectSelect = document.getElementById('project_id');
+        const smartworking = document.getElementById('is_smartworking');
+        const trasferta = document.getElementById('is_trasferta');
+
+        function applyFerieState() {
+            const ferie = isFerie.checked;
+            [projectSelect, activitySelect, activityTextarea, smartworking, trasferta].forEach(function(el) {
+                if (!el) return;
+                el.disabled = ferie;
+                if (ferie) {
+                    if (el.type === 'checkbox') {
+                        el.checked = false;
+                    } else {
+                        el.value = '';
+                    }
+                }
+            });
+        }
+
+        isFerie.addEventListener('change', applyFerieState);
+        applyFerieState();
     });
 </script>
 {% endblock %}

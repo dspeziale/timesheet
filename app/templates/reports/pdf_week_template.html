@@ -95,13 +95,36 @@
             <tr>
                 <td class="text-nowrap">Settimana {{ w.week_num }}</td>
                 <td class="text-nowrap">{{ w.start.strftime('%d/%m/%Y') }} - {{ w.end.strftime('%d/%m/%Y') }}</td>
-                <td>{{ w.activities_str }}</td>
+                <td>
+                    {{ w.activities_str }}
+                    {% if w.flags_str %}
+                    <div style="margin-top: 4px; color: #555; font-style: italic;">Luogo: {{ w.flags_str }}</div>
+                    {% endif %}
+                </td>
             </tr>
             {% else %}
             <tr>
                 <td colspan="3" class="text-end">Nessun dato presente per questo mese.</td>
             </tr>
             {% endfor %}
+        </tbody>
+    </table>
+
+    <h3 style="margin-top: 40px;">Giorni Lavorati</h3>
+    <table>
+        <tbody>
+            <tr>
+                <td>Giorni lavorativi del mese (Lun-Ven)</td>
+                <td class="text-end">{{ working_days_in_month }}</td>
+            </tr>
+            <tr>
+                <td>Giorni di ferie</td>
+                <td class="text-end">- {{ ferie_days }}</td>
+            </tr>
+            <tr class="fw-bold">
+                <td>GIORNI LAVORATI</td>
+                <td class="text-end">{{ giorni_lavorati }}</td>
+            </tr>
         </tbody>
     </table>
     <script>

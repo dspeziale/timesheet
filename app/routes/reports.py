@@ -5,6 +5,7 @@ from app.models.timesheet import TimesheetEntry
 from app.models.project import Project
 from app.models.customer import Customer
 from datetime import datetime, timedelta
+import calendar
 import pandas as pd
 import io
 
@@ -25,6 +26,8 @@ def monthly():
     summary = {}
     total_general = 0
     for t in timesheets:
+        if t.is_ferie or not t.project:
+            continue
         pid = t.project_id
         if pid not in summary:
             summary[pid] = {
@@ -87,6 +90,19 @@ def export_excel():
 
     data = []
     for t in timesheets:
+        if t.is_ferie or not t.project:
+            data.append({
+                'Data': t.work_date.strftime('%Y-%m-%d'),
+                'Cliente': '',
+                'Progetto': '',
+                'Commessa': '',
+                'Giornate': float(t.days_worked),
+                'Tariffa': 0,
+                'Totale': 0,
+                'Attività': '',
+                'Luogo': 'Ferie'
+            })
+            continue
         data.append({
             'Data': t.work_date.strftime('%Y-%m-%d'),
             'Cliente': t.project.customer.company_name,
@@ -123,6 +139,8 @@ def export_pdf():
     summary = {}
     total_general = 0
     for t in timesheets:
+        if t.is_ferie or not t.project:
+            continue
         pid = t.project_id
         if pid not in summary:
             summary[pid] = {
@@ -160,6 +178,15 @@ def export_pdf_week():
         db.extract('month', TimesheetEntry.work_date) == month
     ).order_by(TimesheetEntry.work_date).all()
 
+    def flag_label(entry):
+        if entry.is_ferie:
+            return 'Ferie'
+        if entry.is_smartworking:
+            return 'Smartworking'
+        if entry.is_trasferta:
+            return 'Trasferta'
+        return 'Sede'
+
     # Aggrega per settimana (ISO): una riga per settimana con le attività distinte
     weeks = {}
     for t in timesheets:
@@ -173,7 +200,8 @@ def export_pdf_week():
                 'start': monday,
                 'end': sunday,
                 'days': 0,
-                'activities': []  # mantiene l'ordine, distinte
+                'activities': [],  # mantiene l'ordine, distinte
+                'flags': []        # dettaglio distinto sede/smartworking/trasferta/ferie
             }
         w = weeks[key]
         w['days'] += float(t.days_worked)
@@ -181,19 +209,25 @@ def export_pdf_week():
             name = t.activity.name.strip()
             if name and name not in w['activities']:
                 w['activities'].append(name)
+        label = flag_label(t)
+        if label not in w['flags']:
+            w['flags'].append(label)
 
     weeks_list = []
     for key in sorted(weeks.keys()):
         w = weeks[key]
         w['activities_str'] = ', '.join(w['activities'])
+        w['flags_str'] = ', '.join(w['flags'])
         weeks_list.append(w)
 
-    total_days = sum(w['days'] for w in weeks_list)
+    total_weeks = len(weeks_list)
 
     # Riepilogo per progetto conteggiando le settimane lavorate
-    # (una settimana conta se lavorata almeno un giorno)
+    # (una settimana conta se lavorata almeno un giorno; le ferie sono escluse)
     project_summary = {}
     for t in timesheets:
+        if t.is_ferie or not t.project:
+            continue
         pid = t.project_id
         iso_week_key = t.work_date.isocalendar()[:2]  # (iso_year, iso_week)
         if pid not in project_summary:
@@ -213,12 +247,18 @@ def export_pdf_week():
         })
     project_list.sort(key=lambda x: x['project'].name)
 
-    total_weeks = len(weeks_list)
+    # Giorni lavorati = giorni lavorativi del mese (Lun-Ven) - giorni di ferie del mese
+    cal = calendar.monthcalendar(year, month)
+    working_days_in_month = sum(1 for week in cal for day in week[:5] if day != 0)
+    ferie_days = sum(float(t.days_worked) for t in timesheets if t.is_ferie)
+    giorni_lavorati = working_days_in_month - ferie_days
 
     return render_template('reports/pdf_week_template.html',
                            weeks=weeks_list,
                            year=year,
                            month=month,
-                           total_days=total_days,
                            project_summary=project_list,
-                           total_weeks=total_weeks)
+                           total_weeks=total_weeks,
+                           working_days_in_month=working_days_in_month,
+                           ferie_days=ferie_days,
+                           giorni_lavorati=giorni_lavorati)

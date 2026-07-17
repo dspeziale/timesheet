@@ -26,7 +26,7 @@ def index():
         db.extract('month', TimesheetEntry.work_date) == now.month
     ).all()
     
-    days_worked = sum(float(t.days_worked) for t in timesheets_this_month)
+    days_worked = sum(float(t.days_worked) for t in timesheets_this_month if not t.is_ferie)
     
     # Calculate working days in current month (Mon-Fri)
     cal = calendar.monthcalendar(now.year, now.month)
@@ -40,7 +40,7 @@ def index():
     expected_revenue = working_days_in_month * max_rate
 
     # Actual Billable this month
-    actual_revenue = sum(float(t.days_worked) * float(t.project.daily_rate) for t in timesheets_this_month)
+    actual_revenue = sum(float(t.days_worked) * float(t.project.daily_rate) for t in timesheets_this_month if not t.is_ferie and t.project)
 
     return render_template('dashboard/index.html', 
                            title='Dashboard',

@@ -38,11 +38,13 @@
                 {% for t in timesheets %}
                 <tr>
                     <td data-sort="{{ t.work_date.strftime('%Y%m%d') }}">{{ t.work_date|ita_day }} {{ t.work_date.strftime('%d/%m/%Y') }}</td>
-                    <td>{{ t.project.name }}</td>
+                    <td>{{ t.project.name if t.project else '—' }}</td>
                     <td>{{ t.days_worked }}</td>
                     <td>{{ t.activity.name if t.activity else '' }}</td>
                     <td>
-                        {% if t.is_smartworking %}
+                        {% if t.is_ferie %}
+                            <span class="badge bg-success">Ferie</span>
+                        {% elif t.is_smartworking %}
                             <span class="badge bg-info">Smartworking</span>
                         {% elif t.is_trasferta %}
                             <span class="badge bg-warning text-dark">Trasferta</span>

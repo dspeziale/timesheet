@@ -99,12 +99,12 @@
             {% for t in timesheets %}
             <tr>
                 <td>{{ t.work_date.strftime('%d/%m/%Y') }}</td>
-                <td>{{ t.project.name }}</td>
+                <td>{{ t.project.name if t.project else '—' }}</td>
                 <td class="text-end">{{ t.days_worked }}</td>
                 <td>{{ t.activity.name if t.activity else '' }}</td>
                 <td>
-                    {% if t.is_smartworking %} Smartworking {% elif t.is_trasferta %} Trasferta {% else %} Sede {% endif
-                    %}
+                    {% if t.is_ferie %} Ferie {% elif t.is_smartworking %} Smartworking {% elif t.is_trasferta %}
+                    Trasferta {% else %} Sede {% endif %}
                 </td>
             </tr>
             {% endfor %}

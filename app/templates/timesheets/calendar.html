@@ -154,10 +154,12 @@
                                         {% set total_days = 0 %}
                                         {% for entry in entries_by_day[day] %}
                                             <div class="entry-card">
-                                                <span class="entry-project" title="{{ entry.project.name }}">{{ entry.project.name }}</span>
+                                                <span class="entry-project" title="{{ entry.project.name if entry.project else 'Ferie' }}">{{ entry.project.name if entry.project else 'Ferie' }}</span>
                                                 <div class="d-flex justify-content-between align-items-center mt-1">
                                                     <span class="entry-days">{{ entry.days_worked }}g</span>
-                                                    {% if entry.is_smartworking %}
+                                                    {% if entry.is_ferie %}
+                                                        <span class="badge bg-success" style="font-size:0.7em;">Ferie</span>
+                                                    {% elif entry.is_smartworking %}
                                                         <span class="badge bg-info text-dark" style="font-size:0.7em;">Smart</span>
                                                     {% elif entry.is_trasferta %}
                                                         <span class="badge bg-warning text-dark" style="font-size:0.7em;">Trasf</span>
