@@ -40,6 +40,7 @@
                         <th>Commessa</th>
                         <th>Progetto</th>
                         <th class="text-end">Settimane</th>
+                        <th class="text-end">Giorni</th>
                         <th class="text-end">Tariffa</th>
                         <th class="text-end">Totale</th>
                     </tr>
@@ -51,18 +52,19 @@
                         <td>{{ item.project.code }}</td>
                         <td>{{ item.project.name }}</td>
                         <td class="text-end">{{ item.weeks_worked }}</td>
+                        <td class="text-end">{{ item.days }}</td>
                         <td class="text-end">€ {{ item.rate|format_currency }}</td>
                         <td class="text-end">€ {{ item.total|format_currency }}</td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="text-center">Nessun dato presente per questo mese.</td>
+                        <td colspan="7" class="text-center">Nessun dato presente per questo mese.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
                     <tr class="table-primary fw-bold">
-                        <td colspan="5" class="text-end">TOTALE GENERALE:</td>
+                        <td colspan="6" class="text-end">TOTALE GENERALE:</td>
                         <td class="text-end">€ {{ total_general|format_currency }}</td>
                     </tr>
                     <!-- <tr class="table-success fw-bold">

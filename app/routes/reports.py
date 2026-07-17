@@ -11,6 +11,35 @@ import io
 
 reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
 
+
+def _weekdays_between(start, end):
+    """Numero di giorni feriali (Lun-Ven) tra due date, estremi inclusi."""
+    if not start or not end or end < start:
+        return 0
+    count = 0
+    d = start
+    while d <= end:
+        if d.weekday() < 5:
+            count += 1
+        d += timedelta(days=1)
+    return count
+
+
+def _billable_days_for_weeks(week_mondays, project):
+    """Giorni fatturabili date le settimane lavorate (lunedi di ciascuna),
+    ogni settimana vale 5 giorni feriali ma proratati sull'inizio/fine commessa."""
+    total = 0
+    for monday in week_mondays:
+        friday = monday + timedelta(days=4)
+        eff_start = monday
+        if project.start_date and project.start_date > eff_start:
+            eff_start = project.start_date
+        eff_end = friday
+        if project.end_date and project.end_date < eff_end:
+            eff_end = project.end_date
+        total += _weekdays_between(eff_start, eff_end)
+    return total
+
 @reports_bp.route('/monthly', methods=['GET'])
 @login_required
 def monthly():
@@ -24,27 +53,29 @@ def monthly():
 
     # Aggrega per progetto ragionando a settimane (come nel report week):
     # una settimana risulta lavorata se ci si lavora almeno un giorno.
-    # Importo = settimane lavorate x tariffa giornaliera.
+    # Ogni settimana vale 5 giorni feriali, proratati sull'inizio/fine commessa.
+    # Importo = giorni fatturabili x tariffa giornaliera.
     summary = {}
     for t in timesheets:
         if t.is_ferie or not t.project:
             continue
         pid = t.project_id
-        iso_week_key = t.work_date.isocalendar()[:2]  # (iso_year, iso_week)
+        monday = t.work_date - timedelta(days=t.work_date.weekday())
         if pid not in summary:
             summary[pid] = {
                 'project': t.project,
                 'customer': t.project.customer,
                 'rate': t.project.daily_rate,
-                'weeks': set()
+                'mondays': set()
             }
-        summary[pid]['weeks'].add(iso_week_key)
+        summary[pid]['mondays'].add(monday)
 
     summary = list(summary.values())
     total_general = 0
     for item in summary:
-        item['weeks_worked'] = len(item['weeks'])
-        item['total'] = item['weeks_worked'] * float(item['rate'])
+        item['weeks_worked'] = len(item['mondays'])
+        item['days'] = _billable_days_for_weeks(item['mondays'], item['project'])
+        item['total'] = item['days'] * float(item['rate'])
         total_general += item['total']
     summary.sort(key=lambda x: x['project'].name)
 
@@ -143,27 +174,29 @@ def export_pdf():
     ).order_by(TimesheetEntry.work_date).all()
 
     # Riepilogo per progetto a settimane lavorate (coerente con /monthly):
-    # importo = settimane lavorate x tariffa giornaliera.
+    # ogni settimana vale 5 giorni feriali proratati sull'inizio/fine commessa,
+    # importo = giorni fatturabili x tariffa giornaliera.
     summary = {}
     for t in timesheets:
         if t.is_ferie or not t.project:
             continue
         pid = t.project_id
-        iso_week_key = t.work_date.isocalendar()[:2]
+        monday = t.work_date - timedelta(days=t.work_date.weekday())
         if pid not in summary:
             summary[pid] = {
                 'project': t.project,
                 'customer': t.project.customer,
                 'rate': t.project.daily_rate,
-                'weeks': set()
+                'mondays': set()
             }
-        summary[pid]['weeks'].add(iso_week_key)
+        summary[pid]['mondays'].add(monday)
 
     summary = list(summary.values())
     total_general = 0
     for item in summary:
-        item['weeks_worked'] = len(item['weeks'])
-        item['total'] = item['weeks_worked'] * float(item['rate'])
+        item['weeks_worked'] = len(item['mondays'])
+        item['days'] = _billable_days_for_weeks(item['mondays'], item['project'])
+        item['total'] = item['days'] * float(item['rate'])
         total_general += item['total']
     summary.sort(key=lambda x: x['project'].name)
 
