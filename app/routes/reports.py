@@ -43,41 +43,59 @@ def _billable_days_span(last_worked, project, month_start, month_end, ferie_entr
     return max(days, 0)
 
 
-def _group_by_customer(projects):
-    """Raggruppa le voci per progetto in una riga per cliente, sommando giorni e
-    totali. Codici commessa e nomi progetto vengono concatenati; la tariffa e'
-    mostrata solo se unica tra i progetti del cliente, altrimenti None."""
+def _group_by_customer(projects, month_start, month_end, ferie_entries):
+    """Raggruppa le voci per progetto in una riga per cliente. I giorni e le
+    settimane NON vengono sommati commessa per commessa (creerebbe doppio
+    conteggio): si calcola un unico periodo per cliente, dall'inizio della prima
+    commessa fino all'ultimo giorno registrato, meno le ferie del periodo."""
     by_customer = {}
     for it in projects:
         cid = it['customer'].id
         if cid not in by_customer:
             by_customer[cid] = {
                 'customer': it['customer'],
+                'projects': [],
                 'mondays': set(),
-                'days': 0,
-                'total': 0,
                 'codes': [],
                 'names': [],
                 'rates': set(),
             }
         g = by_customer[cid]
+        g['projects'].append(it)
         g['mondays'] |= it['mondays']
-        g['days'] += it['days']
-        g['total'] += it['total']
         g['codes'].append(it['project'].code)
         g['names'].append(it['project'].name)
         g['rates'].add(float(it['rate']))
 
     rows = []
     for g in by_customer.values():
+        # Periodo unico del cliente (nessun doppio conteggio tra le commesse)
+        eff_start = min(
+            (max(month_start, it['project'].start_date) if it['project'].start_date else month_start)
+            for it in g['projects']
+        )
+        eff_end = min(month_end, max(it['last_worked'] for it in g['projects']))
+        days = _weekdays_between(eff_start, eff_end)
+        for fdate, fdays in ferie_entries:
+            if eff_start <= fdate <= eff_end and fdate.weekday() < 5:
+                days -= fdays
+        days = max(days, 0)
+
+        single_rate = next(iter(g['rates'])) if len(g['rates']) == 1 else None
+        if single_rate is not None:
+            total = days * single_rate
+        else:
+            # Tariffe diverse tra commesse: ripiego sulla somma per progetto
+            total = sum(it['total'] for it in g['projects'])
+
         rows.append({
             'customer': g['customer'],
             'code': ', '.join(g['codes']),
             'name': ', '.join(g['names']),
             'weeks_worked': len(g['mondays']),
-            'days': g['days'],
-            'total': g['total'],
-            'rate': (next(iter(g['rates'])) if len(g['rates']) == 1 else None),
+            'days': days,
+            'total': total,
+            'rate': single_rate,
         })
     rows.sort(key=lambda x: x['customer'].company_name)
     return rows
@@ -122,7 +140,7 @@ def monthly():
         item['days'] = _billable_days_span(item['last_worked'], item['project'], month_start, month_end, ferie_entries)
         item['total'] = item['days'] * float(item['rate'])
 
-    summary = _group_by_customer(projects)
+    summary = _group_by_customer(projects, month_start, month_end, ferie_entries)
     total_general = sum(item['total'] for item in summary)
 
     total_net = total_general * 0.73
@@ -248,7 +266,7 @@ def export_pdf():
         item['days'] = _billable_days_span(item['last_worked'], item['project'], month_start, month_end, ferie_entries)
         item['total'] = item['days'] * float(item['rate'])
 
-    summary = _group_by_customer(projects)
+    summary = _group_by_customer(projects, month_start, month_end, ferie_entries)
     total_general = sum(item['total'] for item in summary)
 
     total_net = total_general * 0.73
