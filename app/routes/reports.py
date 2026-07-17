@@ -25,22 +25,16 @@ def _weekdays_between(start, end):
     return count
 
 
-def _billable_days_for_weeks(week_mondays, project, month_start, month_end):
-    """Giorni fatturabili date le settimane lavorate (lunedi di ciascuna).
-    Ogni settimana vale 5 giorni feriali (Lun-Ven), proratati sull'inizio/fine
-    commessa e ritagliati ai confini del mese selezionato (le settimane a cavallo
-    non sconfinano nel mese precedente/successivo)."""
-    total = 0
-    for monday in week_mondays:
-        friday = monday + timedelta(days=4)
-        eff_start = max(monday, month_start)
-        if project.start_date and project.start_date > eff_start:
-            eff_start = project.start_date
-        eff_end = min(friday, month_end)
-        if project.end_date and project.end_date < eff_end:
-            eff_end = project.end_date
-        total += _weekdays_between(eff_start, eff_end)
-    return total
+def _billable_days_span(last_worked, project, month_start, month_end):
+    """Giorni fatturabili come giorni feriali (Lun-Ven) continuativi dall'inizio
+    della commessa (o inizio mese) fino all'ultimo giorno effettivamente registrato
+    nel mese. Non serve registrare ogni giorno: si fattura l'intero periodo lavorato.
+    Il range e' ritagliato sull'inizio/fine commessa e sui confini del mese."""
+    eff_start = max(month_start, project.start_date) if project.start_date else month_start
+    eff_end = min(last_worked, month_end)
+    if project.end_date and project.end_date < eff_end:
+        eff_end = project.end_date
+    return _weekdays_between(eff_start, eff_end)
 
 @reports_bp.route('/monthly', methods=['GET'])
 @login_required
@@ -53,10 +47,9 @@ def monthly():
         db.extract('month', TimesheetEntry.work_date) == month
     ).all()
 
-    # Aggrega per progetto ragionando a settimane (come nel report week):
-    # una settimana risulta lavorata se ci si lavora almeno un giorno.
-    # Ogni settimana vale 5 giorni feriali, proratati sull'inizio/fine commessa.
-    # Importo = giorni fatturabili x tariffa giornaliera.
+    # Aggrega per progetto: si fatturano i giorni feriali continuativi dall'inizio
+    # della commessa fino all'ultimo giorno registrato nel mese (non serve
+    # registrare ogni giorno). Importo = giorni fatturabili x tariffa giornaliera.
     summary = {}
     for t in timesheets:
         if t.is_ferie or not t.project:
@@ -68,9 +61,12 @@ def monthly():
                 'project': t.project,
                 'customer': t.project.customer,
                 'rate': t.project.daily_rate,
-                'mondays': set()
+                'mondays': set(),
+                'last_worked': t.work_date
             }
         summary[pid]['mondays'].add(monday)
+        if t.work_date > summary[pid]['last_worked']:
+            summary[pid]['last_worked'] = t.work_date
 
     month_start = datetime(year, month, 1).date()
     month_end = datetime(year, month, calendar.monthrange(year, month)[1]).date()
@@ -78,7 +74,7 @@ def monthly():
     total_general = 0
     for item in summary:
         item['weeks_worked'] = len(item['mondays'])
-        item['days'] = _billable_days_for_weeks(item['mondays'], item['project'], month_start, month_end)
+        item['days'] = _billable_days_span(item['last_worked'], item['project'], month_start, month_end)
         item['total'] = item['days'] * float(item['rate'])
         total_general += item['total']
     summary.sort(key=lambda x: x['project'].name)
@@ -177,8 +173,8 @@ def export_pdf():
         db.extract('month', TimesheetEntry.work_date) == month
     ).order_by(TimesheetEntry.work_date).all()
 
-    # Riepilogo per progetto a settimane lavorate (coerente con /monthly):
-    # ogni settimana vale 5 giorni feriali proratati sull'inizio/fine commessa,
+    # Riepilogo per progetto (coerente con /monthly): giorni feriali continuativi
+    # dall'inizio commessa fino all'ultimo giorno registrato nel mese,
     # importo = giorni fatturabili x tariffa giornaliera.
     summary = {}
     for t in timesheets:
@@ -191,9 +187,12 @@ def export_pdf():
                 'project': t.project,
                 'customer': t.project.customer,
                 'rate': t.project.daily_rate,
-                'mondays': set()
+                'mondays': set(),
+                'last_worked': t.work_date
             }
         summary[pid]['mondays'].add(monday)
+        if t.work_date > summary[pid]['last_worked']:
+            summary[pid]['last_worked'] = t.work_date
 
     month_start = datetime(year, month, 1).date()
     month_end = datetime(year, month, calendar.monthrange(year, month)[1]).date()
@@ -201,7 +200,7 @@ def export_pdf():
     total_general = 0
     for item in summary:
         item['weeks_worked'] = len(item['mondays'])
-        item['days'] = _billable_days_for_weeks(item['mondays'], item['project'], month_start, month_end)
+        item['days'] = _billable_days_span(item['last_worked'], item['project'], month_start, month_end)
         item['total'] = item['days'] * float(item['rate'])
         total_general += item['total']
     summary.sort(key=lambda x: x['project'].name)
