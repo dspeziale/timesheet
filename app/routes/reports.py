@@ -25,16 +25,22 @@ def _weekdays_between(start, end):
     return count
 
 
-def _billable_days_span(last_worked, project, month_start, month_end):
+def _billable_days_span(last_worked, project, month_start, month_end, ferie_entries=None):
     """Giorni fatturabili come giorni feriali (Lun-Ven) continuativi dall'inizio
     della commessa (o inizio mese) fino all'ultimo giorno effettivamente registrato
     nel mese. Non serve registrare ogni giorno: si fattura l'intero periodo lavorato.
-    Il range e' ritagliato sull'inizio/fine commessa e sui confini del mese."""
+    Il range e' ritagliato sull'inizio/fine commessa e sui confini del mese.
+    I giorni di ferie che cadono nel periodo vengono sottratti."""
     eff_start = max(month_start, project.start_date) if project.start_date else month_start
     eff_end = min(last_worked, month_end)
     if project.end_date and project.end_date < eff_end:
         eff_end = project.end_date
-    return _weekdays_between(eff_start, eff_end)
+    days = _weekdays_between(eff_start, eff_end)
+    if ferie_entries:
+        for fdate, fdays in ferie_entries:
+            if eff_start <= fdate <= eff_end and fdate.weekday() < 5:
+                days -= fdays
+    return max(days, 0)
 
 @reports_bp.route('/monthly', methods=['GET'])
 @login_required
@@ -70,11 +76,12 @@ def monthly():
 
     month_start = datetime(year, month, 1).date()
     month_end = datetime(year, month, calendar.monthrange(year, month)[1]).date()
+    ferie_entries = [(t.work_date, float(t.days_worked)) for t in timesheets if t.is_ferie]
     summary = list(summary.values())
     total_general = 0
     for item in summary:
         item['weeks_worked'] = len(item['mondays'])
-        item['days'] = _billable_days_span(item['last_worked'], item['project'], month_start, month_end)
+        item['days'] = _billable_days_span(item['last_worked'], item['project'], month_start, month_end, ferie_entries)
         item['total'] = item['days'] * float(item['rate'])
         total_general += item['total']
     summary.sort(key=lambda x: x['project'].name)
@@ -196,11 +203,12 @@ def export_pdf():
 
     month_start = datetime(year, month, 1).date()
     month_end = datetime(year, month, calendar.monthrange(year, month)[1]).date()
+    ferie_entries = [(t.work_date, float(t.days_worked)) for t in timesheets if t.is_ferie]
     summary = list(summary.values())
     total_general = 0
     for item in summary:
         item['weeks_worked'] = len(item['mondays'])
-        item['days'] = _billable_days_span(item['last_worked'], item['project'], month_start, month_end)
+        item['days'] = _billable_days_span(item['last_worked'], item['project'], month_start, month_end, ferie_entries)
         item['total'] = item['days'] * float(item['rate'])
         total_general += item['total']
     summary.sort(key=lambda x: x['project'].name)
@@ -305,18 +313,19 @@ def export_pdf_week():
 
     # Giorni lavorati: giorni feriali (Lun-Ven) tenendo conto dell'inizio commessa,
     # dallo start della commessa (o inizio mese) fino all'ultimo giorno registrato,
-    # meno le eventuali ferie del mese.
-    ferie_days = sum(float(t.days_worked) for t in timesheets if t.is_ferie)
+    # meno le ferie che cadono nel periodo.
+    ferie_all = [(t.work_date, float(t.days_worked)) for t in timesheets if t.is_ferie]
     if project_summary:
         eff_start = min(
             (max(month_start, it['project'].start_date) if it['project'].start_date else month_start)
             for it in project_summary.values()
         )
         eff_end = min(month_end, max(it['last_worked'] for it in project_summary.values()))
-        working_days_in_month = _weekdays_between(eff_start, eff_end)
     else:
-        # Nessuna commessa lavorata: fallback ai giorni lavorativi dell'intero mese
-        working_days_in_month = _weekdays_between(month_start, month_end)
+        # Nessuna commessa lavorata: fallback all'intero mese
+        eff_start, eff_end = month_start, month_end
+    working_days_in_month = _weekdays_between(eff_start, eff_end)
+    ferie_days = sum(d for fd, d in ferie_all if eff_start <= fd <= eff_end and fd.weekday() < 5)
     giorni_lavorati = working_days_in_month - ferie_days
 
     return render_template('reports/pdf_week_template.html',
