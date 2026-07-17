@@ -22,25 +22,31 @@ def monthly():
         db.extract('month', TimesheetEntry.work_date) == month
     ).all()
 
-    # Aggrega per progetto
+    # Aggrega per progetto ragionando a settimane (come nel report week):
+    # una settimana risulta lavorata se ci si lavora almeno un giorno.
+    # Importo = settimane lavorate x tariffa giornaliera.
     summary = {}
-    total_general = 0
     for t in timesheets:
         if t.is_ferie or not t.project:
             continue
         pid = t.project_id
+        iso_week_key = t.work_date.isocalendar()[:2]  # (iso_year, iso_week)
         if pid not in summary:
             summary[pid] = {
                 'project': t.project,
                 'customer': t.project.customer,
-                'days': 0,
                 'rate': t.project.daily_rate,
-                'total': 0
+                'weeks': set()
             }
-        days = float(t.days_worked)
-        summary[pid]['days'] += days
-        summary[pid]['total'] += days * float(t.project.daily_rate)
-        total_general += days * float(t.project.daily_rate)
+        summary[pid]['weeks'].add(iso_week_key)
+
+    summary = list(summary.values())
+    total_general = 0
+    for item in summary:
+        item['weeks_worked'] = len(item['weeks'])
+        item['total'] = item['weeks_worked'] * float(item['rate'])
+        total_general += item['total']
+    summary.sort(key=lambda x: x['project'].name)
 
     total_net = total_general * 0.73
 
@@ -68,10 +74,10 @@ def monthly():
         'netto_in_tasca': netto_in_tasca
     }
 
-    return render_template('reports/monthly.html', 
-                           title='Riepilogo Mensile', 
-                           summary=summary.values(), 
-                           year=year, 
+    return render_template('reports/monthly.html',
+                           title='Riepilogo Mensile',
+                           summary=summary,
+                           year=year,
                            month=month,
                            total_general=total_general,
                            total_net=total_net,
@@ -136,24 +142,30 @@ def export_pdf():
         db.extract('month', TimesheetEntry.work_date) == month
     ).order_by(TimesheetEntry.work_date).all()
 
+    # Riepilogo per progetto a settimane lavorate (coerente con /monthly):
+    # importo = settimane lavorate x tariffa giornaliera.
     summary = {}
-    total_general = 0
     for t in timesheets:
         if t.is_ferie or not t.project:
             continue
         pid = t.project_id
+        iso_week_key = t.work_date.isocalendar()[:2]
         if pid not in summary:
             summary[pid] = {
                 'project': t.project,
                 'customer': t.project.customer,
-                'days': 0,
                 'rate': t.project.daily_rate,
-                'total': 0
+                'weeks': set()
             }
-        days = float(t.days_worked)
-        summary[pid]['days'] += days
-        summary[pid]['total'] += days * float(t.project.daily_rate)
-        total_general += days * float(t.project.daily_rate)
+        summary[pid]['weeks'].add(iso_week_key)
+
+    summary = list(summary.values())
+    total_general = 0
+    for item in summary:
+        item['weeks_worked'] = len(item['weeks'])
+        item['total'] = item['weeks_worked'] * float(item['rate'])
+        total_general += item['total']
+    summary.sort(key=lambda x: x['project'].name)
 
     total_net = total_general * 0.73
 
@@ -161,7 +173,7 @@ def export_pdf():
     # restituiamo un template HTML minimale con window.print()
     return render_template('reports/pdf_template.html',
                            timesheets=timesheets,
-                           summary=summary.values(),
+                           summary=summary,
                            year=year,
                            month=month,
                            total_general=total_general,

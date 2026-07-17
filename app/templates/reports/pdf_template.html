@@ -55,7 +55,7 @@
                 <th>Cliente</th>
                 <th>Commessa</th>
                 <th>Progetto</th>
-                <th class="text-end">Giorni</th>
+                <th class="text-end">Settimane</th>
                 <th class="text-end">Tariffa</th>
                 <th class="text-end">Totale</th>
             </tr>
@@ -66,7 +66,7 @@
                 <td>{{ item.customer.company_name }}</td>
                 <td>{{ item.project.code }}</td>
                 <td>{{ item.project.name }}</td>
-                <td class="text-end">{{ item.days }}</td>
+                <td class="text-end">{{ item.weeks_worked }}</td>
                 <td class="text-end">€ {{ item.rate|format_currency }}</td>
                 <td class="text-end">€ {{ item.total|format_currency }}</td>
             </tr>
