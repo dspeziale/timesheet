@@ -97,8 +97,16 @@
                 <td class="text-nowrap">{{ w.start.strftime('%d/%m/%Y') }} - {{ w.end.strftime('%d/%m/%Y') }}</td>
                 <td>
                     {{ w.activities_str }}
-                    {% if w.flags_str %}
-                    <div style="margin-top: 4px; color: #555; font-style: italic;">Luogo: {{ w.flags_str }}</div>
+                    {% if w.flags %}
+                    <div style="margin-top: 4px;">
+                        {% for f in w.flags %}
+                        <span style="font-weight: bold; color:
+                            {%- if f == 'Ferie' %} #198754
+                            {%- elif f == 'Smartworking' %} #0d6efd
+                            {%- elif f == 'Trasferta' %} #fd7e14
+                            {%- else %} #6c757d{% endif %};">{{ f }}</span>{% if not loop.last %}<span style="color:#999;">, </span>{% endif %}
+                        {% endfor %}
+                    </div>
                     {% endif %}
                 </td>
             </tr>
