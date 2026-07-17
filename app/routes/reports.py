@@ -272,6 +272,9 @@ def export_pdf_week():
 
     total_weeks = len(weeks_list)
 
+    month_start = datetime(year, month, 1).date()
+    month_end = datetime(year, month, calendar.monthrange(year, month)[1]).date()
+
     # Riepilogo per progetto conteggiando le settimane lavorate
     # (una settimana conta se lavorata almeno un giorno; le ferie sono escluse)
     project_summary = {}
@@ -284,9 +287,12 @@ def export_pdf_week():
             project_summary[pid] = {
                 'project': t.project,
                 'customer': t.project.customer,
-                'weeks': set()
+                'weeks': set(),
+                'last_worked': t.work_date
             }
         project_summary[pid]['weeks'].add(iso_week_key)
+        if t.work_date > project_summary[pid]['last_worked']:
+            project_summary[pid]['last_worked'] = t.work_date
 
     project_list = []
     for item in project_summary.values():
@@ -297,10 +303,20 @@ def export_pdf_week():
         })
     project_list.sort(key=lambda x: x['project'].name)
 
-    # Giorni lavorati = giorni lavorativi del mese (Lun-Ven) - giorni di ferie del mese
-    cal = calendar.monthcalendar(year, month)
-    working_days_in_month = sum(1 for week in cal for day in week[:5] if day != 0)
+    # Giorni lavorati: giorni feriali (Lun-Ven) tenendo conto dell'inizio commessa,
+    # dallo start della commessa (o inizio mese) fino all'ultimo giorno registrato,
+    # meno le eventuali ferie del mese.
     ferie_days = sum(float(t.days_worked) for t in timesheets if t.is_ferie)
+    if project_summary:
+        eff_start = min(
+            (max(month_start, it['project'].start_date) if it['project'].start_date else month_start)
+            for it in project_summary.values()
+        )
+        eff_end = min(month_end, max(it['last_worked'] for it in project_summary.values()))
+        working_days_in_month = _weekdays_between(eff_start, eff_end)
+    else:
+        # Nessuna commessa lavorata: fallback ai giorni lavorativi dell'intero mese
+        working_days_in_month = _weekdays_between(month_start, month_end)
     giorni_lavorati = working_days_in_month - ferie_days
 
     return render_template('reports/pdf_week_template.html',
