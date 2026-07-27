@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 import calendar
 import pandas as pd
 import io
+from fpdf import FPDF
+from fpdf.fonts import FontFace
 
 reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
 
@@ -385,12 +387,80 @@ def export_pdf_week():
     ferie_days = sum(d for fd, d in ferie_all if eff_start <= fd <= eff_end and fd.weekday() < 5)
     giorni_lavorati = working_days_in_month - ferie_days
 
-    return render_template('reports/pdf_week_template.html',
-                           weeks=weeks_list,
-                           year=year,
-                           month=month,
-                           project_summary=project_list,
-                           total_weeks=total_weeks,
-                           working_days_in_month=working_days_in_month,
-                           ferie_days=ferie_days,
-                           giorni_lavorati=giorni_lavorati)
+    # --- Genera un vero PDF lato server (fpdf2: Python puro, compatibile serverless) ---
+    def _lat(s):
+        # I font core supportano latin-1: sostituisce eventuali caratteri fuori set
+        return str(s).encode('latin-1', 'replace').decode('latin-1')
+
+    def _num(n):
+        n = float(n)
+        return str(int(n)) if n == int(n) else ('%.1f' % n)
+
+    bold = FontFace(emphasis='BOLD')
+
+    pdf = FPDF(orientation='P', unit='mm', format='A4')
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+
+    pdf.set_font('Helvetica', 'B', 16)
+    pdf.cell(0, 10, _lat('Report Settimanale - %d/%d' % (month, year)), align='C', new_x='LMARGIN', new_y='NEXT')
+    pdf.ln(3)
+
+    # Riepilogo per Progetto
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(0, 8, _lat('Riepilogo per Progetto'), new_x='LMARGIN', new_y='NEXT')
+    pdf.set_font('Helvetica', '', 10)
+    with pdf.table(col_widths=(35, 30, 35), text_align='LEFT') as table:
+        h = table.row()
+        for label in ('Cliente', 'Commessa', 'Progetto'):
+            h.cell(_lat(label))
+        if project_list:
+            for it in project_list:
+                r = table.row()
+                r.cell(_lat(it['customer'].company_name))
+                r.cell(_lat(it['project'].code))
+                r.cell(_lat(it['project'].name))
+        else:
+            table.row().cell(_lat('Nessun dato presente per questo mese.'), colspan=3)
+    pdf.ln(4)
+
+    # Dettaglio Settimanale
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(0, 8, _lat('Dettaglio Settimanale'), new_x='LMARGIN', new_y='NEXT')
+    pdf.set_font('Helvetica', '', 10)
+    with pdf.table(col_widths=(24, 40, 116), text_align='LEFT', markdown=True) as table:
+        h = table.row()
+        for label in ('Settimana', 'Periodo', 'Attività'):
+            h.cell(_lat(label))
+        if weeks_list:
+            for w in weeks_list:
+                r = table.row()
+                r.cell(_lat('Settimana %s' % w['week_num']))
+                r.cell(_lat('%s - %s' % (w['start'].strftime('%d/%m/%Y'), w['end'].strftime('%d/%m/%Y'))))
+                text = w['activities_str']
+                if w['flags_str']:
+                    text = (text + '\n' if text else '') + '**' + w['flags_str'] + '**'
+                r.cell(_lat(text))
+        else:
+            table.row().cell(_lat('Nessun dato presente per questo mese.'), colspan=3)
+    pdf.ln(4)
+
+    # Giorni Lavorati
+    pdf.set_font('Helvetica', 'B', 12)
+    pdf.cell(0, 8, _lat('Giorni Lavorati'), new_x='LMARGIN', new_y='NEXT')
+    pdf.set_font('Helvetica', '', 10)
+    with pdf.table(col_widths=(150, 40), first_row_as_headings=False, text_align=('LEFT', 'RIGHT')) as table:
+        r = table.row()
+        r.cell(_lat("Giorni lavorativi (Lun-Ven, dall'inizio commessa)"))
+        r.cell(_num(working_days_in_month))
+        r = table.row()
+        r.cell(_lat('Giorni di ferie'))
+        r.cell('- ' + _num(ferie_days))
+        r = table.row(style=bold)
+        r.cell(_lat('GIORNI LAVORATI'))
+        r.cell(_num(giorni_lavorati))
+
+    output = io.BytesIO(bytes(pdf.output()))
+    output.seek(0)
+    filename = 'report_settimanale_%d_%02d.pdf' % (year, month)
+    return send_file(output, as_attachment=True, download_name=filename, mimetype='application/pdf')
