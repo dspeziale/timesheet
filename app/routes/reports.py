@@ -301,7 +301,11 @@ def export_pdf_week():
             return 'Trasferta'
         return 'Sede'
 
-    # Aggrega per settimana (ISO): una riga per settimana con le attività distinte
+    month_start = datetime(year, month, 1).date()
+    month_end = datetime(year, month, calendar.monthrange(year, month)[1]).date()
+
+    # Aggrega per settimana (ISO): una riga per settimana con le attività distinte.
+    # Il periodo mostrato e' ritagliato ai confini del mese corrente.
     weeks = {}
     for t in timesheets:
         iso_year, iso_week, _ = t.work_date.isocalendar()
@@ -311,8 +315,8 @@ def export_pdf_week():
             sunday = monday + timedelta(days=6)
             weeks[key] = {
                 'week_num': iso_week,
-                'start': monday,
-                'end': sunday,
+                'start': max(monday, month_start),
+                'end': min(sunday, month_end),
                 'days': 0,
                 'activities': [],  # mantiene l'ordine, distinte
                 'flags': []        # dettaglio distinto sede/smartworking/trasferta/ferie
@@ -335,9 +339,6 @@ def export_pdf_week():
         weeks_list.append(w)
 
     total_weeks = len(weeks_list)
-
-    month_start = datetime(year, month, 1).date()
-    month_end = datetime(year, month, calendar.monthrange(year, month)[1]).date()
 
     # Riepilogo per progetto conteggiando le settimane lavorate
     # (una settimana conta se lavorata almeno un giorno; le ferie sono escluse)
