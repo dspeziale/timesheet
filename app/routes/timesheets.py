@@ -76,7 +76,15 @@ def add():
         return redirect(url_for('timesheets.index'))
 
     if request.method == 'GET':
-        form.work_date.data = datetime.today().date()
+        # Data preselezionata (es. clic su un giorno del calendario), fallback a oggi
+        date_arg = request.args.get('date')
+        preset = None
+        if date_arg:
+            try:
+                preset = datetime.strptime(date_arg, '%Y-%m-%d').date()
+            except ValueError:
+                preset = None
+        form.work_date.data = preset or datetime.today().date()
 
     activities = Activity.query.filter_by(active=True).order_by(Activity.name).all()
     form.activity_select.choices = [('', '--- Scegli una precedente ---')] + [(a.name, a.name[:50] + ('...' if len(a.name)>50 else '')) for a in activities]

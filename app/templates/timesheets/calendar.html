@@ -28,6 +28,22 @@
         font-size: 1.1em;
         margin-bottom: 5px;
     }
+    .calendar-grid .day-link {
+        color: inherit;
+        display: inline-block;
+        min-width: 1.6em;
+        text-align: center;
+        border-radius: 50%;
+        line-height: 1.6em;
+        transition: background-color 0.15s;
+    }
+    .calendar-grid .day-link:hover {
+        background-color: var(--bs-primary);
+        color: #fff;
+    }
+    .entry-card {
+        cursor: pointer;
+    }
     .calendar-grid .weekend {
         background-color: var(--bs-light);
     }
@@ -144,15 +160,20 @@
                                 <td class="empty"></td>
                             {% else %}
                                 {% set is_weekend = (loop.index0 == 5 or loop.index0 == 6) %}
+                                {% set day_str = '%04d-%02d-%02d'|format(year, month, day) %}
                                 <td class="{% if is_weekend %}weekend{% endif %}">
                                     <div class="day-number">
-                                        <span class="mobile-day-name">{{ day_names[loop.index0] }}</span>{{ day }}
+                                        <span class="mobile-day-name">{{ day_names[loop.index0] }}</span>
+                                        <a href="{{ url_for('timesheets.add', date=day_str) }}"
+                                           class="day-link text-decoration-none"
+                                           title="Registra giornata del {{ day }}/{{ month }}/{{ year }}">{{ day }}</a>
                                     </div>
                                     <div class="clearfix"></div>
-                                    
+
                                     {% if day in entries_by_day %}
                                         {% set total_days = 0 %}
                                         {% for entry in entries_by_day[day] %}
+                                            <a href="{{ url_for('timesheets.edit', id=entry.id) }}" class="text-decoration-none text-reset" title="Modifica">
                                             <div class="entry-card">
                                                 <span class="entry-project" title="{{ entry.project.name if entry.project else 'Ferie' }}">{{ entry.project.name if entry.project else 'Ferie' }}</span>
                                                 <div class="d-flex justify-content-between align-items-center mt-1">
@@ -168,6 +189,7 @@
                                                     {% endif %}
                                                 </div>
                                             </div>
+                                            </a>
                                         {% endfor %}
                                     {% endif %}
                                 </td>
