@@ -4,10 +4,30 @@ from app import db
 from app.models.timesheet import TimesheetEntry, Activity
 from app.models.project import Project
 from app.forms.timesheet_forms import TimesheetForm
-from datetime import datetime
+from datetime import datetime, date
 import calendar
 
 timesheets_bp = Blueprint('timesheets', __name__, url_prefix='/timesheets')
+
+# Descrizioni usate dalla compilazione automatica del mese: si alternano in
+# sequenza cosi' che i giorni consecutivi non riportino la stessa attività.
+IT_ACTIVITIES = [
+    'Sviluppo e manutenzione evolutiva dei moduli applicativi',
+    'Analisi funzionale e stesura della documentazione tecnica',
+    'Correzione anomalie e attività di bug fixing',
+    'Refactoring del codice e ottimizzazione delle performance',
+    'Sviluppo di API REST e integrazione con servizi esterni',
+    'Esecuzione di test unitari e di integrazione',
+    'Ottimizzazione delle query e manutenzione della base dati',
+    'Code review e supporto tecnico al team di sviluppo',
+    'Deploy in ambiente di collaudo e verifica del rilascio',
+    'Riunione di allineamento e pianificazione delle attività',
+    'Manutenzione correttiva e monitoraggio dei sistemi',
+    'Configurazione della pipeline CI/CD e automazione dei rilasci',
+    'Analisi dei requisiti con il cliente e stima delle attività',
+    'Supporto specialistico e troubleshooting in produzione',
+    'Aggiornamento delle librerie e gestione delle dipendenze',
+]
 
 @timesheets_bp.route('/')
 @login_required
@@ -20,7 +40,73 @@ def index():
         db.extract('month', TimesheetEntry.work_date) == month
     ).order_by(TimesheetEntry.work_date.desc()).all()
     
-    return render_template('timesheets/index.html', title='Timesheet', timesheets=timesheets, year=year, month=month)
+    projects = Project.query.filter_by(status='Attivo').all()
+
+    return render_template('timesheets/index.html', title='Timesheet', timesheets=timesheets, year=year, month=month, projects=projects)
+
+
+@timesheets_bp.route('/fill_month', methods=['POST'])
+@login_required
+def fill_month():
+    """Compila in un colpo solo tutti i giorni feriali (Lun-Ven) del mese
+    visualizzato, assegnando al progetto scelto una descrizione di attivita'
+    informatica diversa per ogni giornata. I giorni gia' registrati non vengono
+    toccati: si riempie solo la quota residua fino a 1.0."""
+    year = request.form.get('year', datetime.now().year, type=int)
+    month = request.form.get('month', datetime.now().month, type=int)
+    project_id = request.form.get('project_id', type=int)
+
+    project = db.session.get(Project, project_id) if project_id else None
+    if project is None:
+        flash('Seleziona un progetto valido per compilare il mese.', 'danger')
+        return redirect(url_for('timesheets.index', year=year, month=month))
+
+    # Giornate gia' presenti nel mese, per non superare il limite di 1.0 al giorno
+    booked = {}
+    existing = TimesheetEntry.query.filter(
+        db.extract('year', TimesheetEntry.work_date) == year,
+        db.extract('month', TimesheetEntry.work_date) == month
+    ).all()
+    for e in existing:
+        booked[e.work_date] = booked.get(e.work_date, 0.0) + float(e.days_worked)
+
+    # Riusa le attivita' gia' a catalogo invece di duplicarle
+    activities = {a.name: a for a in Activity.query.all()}
+
+    created = 0
+    for day in range(1, calendar.monthrange(year, month)[1] + 1):
+        work_date = date(year, month, day)
+        if work_date.weekday() >= 5:
+            continue
+
+        remaining = 1.0 - booked.get(work_date, 0.0)
+        if remaining <= 0:
+            continue
+        days_value = '1.0' if remaining >= 1.0 else '0.5'
+
+        name = IT_ACTIVITIES[created % len(IT_ACTIVITIES)]
+        activity = activities.get(name)
+        if not activity:
+            activity = Activity(name=name)
+            db.session.add(activity)
+            db.session.flush()  # serve l'id prima del commit
+            activities[name] = activity
+
+        db.session.add(TimesheetEntry(
+            work_date=work_date,
+            project_id=project.id,
+            days_worked=days_value,
+            activity_id=activity.id
+        ))
+        created += 1
+
+    if created:
+        db.session.commit()
+        flash(f'Compilate {created} giornate su {project.name} per {month:02d}/{year}.', 'success')
+    else:
+        flash(f'Nessuna giornata da compilare: il mese {month:02d}/{year} risulta già completo.', 'info')
+
+    return redirect(url_for('timesheets.index', year=year, month=month))
 
 @timesheets_bp.route('/add', methods=['GET', 'POST'])
 @login_required

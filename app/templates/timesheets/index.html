@@ -17,6 +17,9 @@
             <a href="{{ url_for('timesheets.calendar_view') }}" class="btn btn-outline-primary btn-sm text-nowrap">
                 <i class="bi bi-calendar3"></i> Vista Calendario
             </a>
+            <button type="button" class="btn btn-success btn-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#fillMonthModal">
+                <i class="bi bi-calendar-check"></i> Compila Mese
+            </button>
             <a href="{{ url_for('timesheets.add') }}" class="btn btn-primary btn-sm text-nowrap">
                 <i class="bi bi-plus-circle"></i> Registra Giornata
             </a>
@@ -67,5 +70,45 @@
             </tbody>
         </table>
     </div>
+</div>
+
+<!-- Compilazione automatica del mese (Lun-Ven) -->
+<div class="modal fade" id="fillMonthModal" tabindex="-1" aria-labelledby="fillMonthModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="POST" action="{{ url_for('timesheets.fill_month') }}">
+      <input type="hidden" name="year" value="{{ year }}">
+      <input type="hidden" name="month" value="{{ month }}">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="fillMonthModalLabel">Compila {{ month }}/{{ year }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+        </div>
+        <div class="modal-body">
+          <p>
+            Registra una giornata su tutti i giorni feriali (Lun-Ven) di
+            <strong>{{ month }}/{{ year }}</strong>, con una descrizione di attività informatica
+            diversa per ogni giorno. Le giornate già inserite non vengono modificate.
+          </p>
+          <div class="mb-2">
+            <label for="fill-project" class="form-label">Progetto</label>
+            <select name="project_id" id="fill-project" class="form-select" required>
+              {% for p in projects %}
+              <option value="{{ p.id }}">{{ p.code }} - {{ p.name }}</option>
+              {% endfor %}
+            </select>
+            {% if not projects %}
+            <div class="form-text text-danger">Nessun progetto attivo disponibile.</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+          <button type="submit" class="btn btn-success" {% if not projects %}disabled{% endif %}>
+            <i class="bi bi-calendar-check"></i> Compila Mese
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
 </div>
 {% endblock %}
