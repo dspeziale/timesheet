@@ -58,6 +58,8 @@
                 <th class="text-end">Settimane</th>
                 <th class="text-end">Giorni</th>
                 <th class="text-end">Tariffa</th>
+                <th class="text-end">Compensi</th>
+                <th class="text-end">Spese Trasferta</th>
                 <th class="text-end">Totale</th>
             </tr>
         </thead>
@@ -71,20 +73,64 @@
                 <td class="text-end">{{ item.days }}</td>
                 <td class="text-end">{% if item.rate is not none %}€ {{ item.rate|format_currency }}{% else %}-{% endif %}</td>
                 <td class="text-end">€ {{ item.total|format_currency }}</td>
+                <td class="text-end">€ {{ item.expenses|format_currency }}</td>
+                <td class="text-end fw-bold">€ {{ item.total_with_expenses|format_currency }}</td>
             </tr>
             {% endfor %}
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="6" class="text-end fw-bold">TOTALE GENERALE:</td>
+                <td colspan="6" class="text-end fw-bold">TOTALE COMPENSI:</td>
                 <td class="text-end fw-bold">€ {{ total_general|format_currency }}</td>
+                <td class="text-end fw-bold">€ {{ total_expenses|format_currency }}</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td colspan="8" class="text-end fw-bold">TOTALE DA FATTURARE:</td>
+                <td class="text-end fw-bold">€ {{ total_with_expenses|format_currency }}</td>
             </tr>
             <!--             <tr>
-                <td colspan="5" class="text-end fw-bold" style="color: green;">TOTALE NETTO (-27%):</td>
+                <td colspan="8" class="text-end fw-bold" style="color: green;">TOTALE NETTO (-27%):</td>
                 <td class="text-end fw-bold" style="color: green;">€ {{ total_net|format_currency }}</td>
             </tr> -->
         </tfoot>
     </table>
+
+    {% if expense_rows %}
+    <h3 style="margin-top: 40px;">Spese di Trasferta - Dettaglio Giornaliero</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Commessa</th>
+                <th class="text-end">Trasporto</th>
+                <th class="text-end">Pranzo / Cena</th>
+                <th class="text-end">Extra Diaria</th>
+                <th class="text-end">Totale Giorno</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in expense_rows %}
+            <tr>
+                <td>{{ r.date.strftime('%d/%m/%Y') }}</td>
+                <td>{{ r.customer.company_name }}</td>
+                <td>{{ r.project.code }}</td>
+                <td class="text-end">€ {{ r.transport|format_currency }}</td>
+                <td class="text-end">€ {{ r.meal|format_currency }}</td>
+                <td class="text-end">€ {{ r.extra|format_currency }}</td>
+                <td class="text-end">€ {{ r.total|format_currency }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="6" class="text-end fw-bold">TOTALE SPESE ({{ expense_rows|length }} giorni):</td>
+                <td class="text-end fw-bold">€ {{ total_expenses|format_currency }}</td>
+            </tr>
+        </tfoot>
+    </table>
+    {% endif %}
 
     <h3 style="margin-top: 40px;">Dettaglio Giornate</h3>
     <table>

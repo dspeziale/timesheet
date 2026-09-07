@@ -68,6 +68,51 @@
             </div>
             <div class="row">
                 <div class="col-12">
+                    <h5 class="mt-2 mb-1"><i class="bi bi-car-front"></i> Spese di Trasferta</h5>
+                    <p class="text-muted small">
+                        Importi giornalieri rimborsati per ogni giorno registrato come
+                        <strong>Trasferta</strong>. Lascia 0 se non previsti.
+                    </p>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        {{ form.trasferta_transport.label(class="form-label") }}
+                        <div class="input-group">
+                            <span class="input-group-text">€</span>
+                            {{ form.trasferta_transport(class="form-control" + (" is-invalid" if form.trasferta_transport.errors else "")) }}
+                        </div>
+                        {% for error in form.trasferta_transport.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        {{ form.trasferta_meal.label(class="form-label") }}
+                        <div class="input-group">
+                            <span class="input-group-text">€</span>
+                            {{ form.trasferta_meal(class="form-control" + (" is-invalid" if form.trasferta_meal.errors else "")) }}
+                        </div>
+                        {% for error in form.trasferta_meal.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        {{ form.trasferta_extra.label(class="form-label") }}
+                        <div class="input-group">
+                            <span class="input-group-text">€</span>
+                            {{ form.trasferta_extra(class="form-control" + (" is-invalid" if form.trasferta_extra.errors else "")) }}
+                        </div>
+                        {% for error in form.trasferta_extra.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
                     <div class="mb-3">
                         {{ form.notes.label(class="form-label") }}
                         {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=3) }}

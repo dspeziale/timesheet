@@ -42,6 +42,8 @@
                         <th class="text-end">Settimane</th>
                         <th class="text-end">Giorni</th>
                         <th class="text-end">Tariffa</th>
+                        <th class="text-end">Compensi</th>
+                        <th class="text-end">Spese Trasferta</th>
                         <th class="text-end">Totale</th>
                     </tr>
                 </thead>
@@ -55,20 +57,28 @@
                         <td class="text-end">{{ item.days }}</td>
                         <td class="text-end">{% if item.rate is not none %}€ {{ item.rate|format_currency }}{% else %}-{% endif %}</td>
                         <td class="text-end">€ {{ item.total|format_currency }}</td>
+                        <td class="text-end">€ {{ item.expenses|format_currency }}</td>
+                        <td class="text-end fw-bold">€ {{ item.total_with_expenses|format_currency }}</td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7" class="text-center">Nessun dato presente per questo mese.</td>
+                        <td colspan="9" class="text-center">Nessun dato presente per questo mese.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
-                    <tr class="table-primary fw-bold">
-                        <td colspan="6" class="text-end">TOTALE GENERALE:</td>
+                    <tr class="fw-bold">
+                        <td colspan="6" class="text-end">TOTALE COMPENSI:</td>
                         <td class="text-end">€ {{ total_general|format_currency }}</td>
+                        <td class="text-end">€ {{ total_expenses|format_currency }}</td>
+                        <td></td>
+                    </tr>
+                    <tr class="table-primary fw-bold">
+                        <td colspan="8" class="text-end">TOTALE DA FATTURARE (compensi + spese):</td>
+                        <td class="text-end">€ {{ total_with_expenses|format_currency }}</td>
                     </tr>
                     <!-- <tr class="table-success fw-bold">
-                        <td colspan="5" class="text-end">TOTALE NETTO (-27%):</td>
+                        <td colspan="8" class="text-end">TOTALE NETTO (-27%):</td>
                         <td class="text-end">€ {{ total_net|format_currency }}</td>
                     </tr> -->
                 </tfoot>
@@ -76,6 +86,57 @@
         </div>
     </div>
 </div>
+
+{% if expense_rows %}
+<div class="card card-warning card-outline mt-4">
+    <div class="card-header">
+        <h3 class="card-title mb-0"><i class="bi bi-car-front"></i> Spese di Trasferta – Dettaglio Giornaliero</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped text-nowrap align-middle">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Cliente</th>
+                        <th>Commessa</th>
+                        <th class="text-end">Trasporto</th>
+                        <th class="text-end">Pranzo / Cena</th>
+                        <th class="text-end">Extra Diaria</th>
+                        <th class="text-end">Totale Giorno</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in expense_rows %}
+                    <tr>
+                        <td>{{ r.date|ita_day }} {{ r.date.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ r.customer.company_name }}</td>
+                        <td>{{ r.project.code }}</td>
+                        <td class="text-end">€ {{ r.transport|format_currency }}</td>
+                        <td class="text-end">€ {{ r.meal|format_currency }}</td>
+                        <td class="text-end">€ {{ r.extra|format_currency }}</td>
+                        <td class="text-end fw-bold">€ {{ r.total|format_currency }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="table-warning fw-bold">
+                        <td colspan="3" class="text-end">TOTALE ({{ expense_rows|length }} giorni di trasferta):</td>
+                        <td class="text-end">€ {{ expense_rows|sum(attribute='transport')|format_currency }}</td>
+                        <td class="text-end">€ {{ expense_rows|sum(attribute='meal')|format_currency }}</td>
+                        <td class="text-end">€ {{ expense_rows|sum(attribute='extra')|format_currency }}</td>
+                        <td class="text-end">€ {{ total_expenses|format_currency }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <p class="text-muted small mb-0">
+            Gli importi provengono dalle spese giornaliere configurate su ciascuna commessa e
+            maturano una volta per giornata di trasferta.
+        </p>
+    </div>
+</div>
+{% endif %}
 
 {% if summary %}
 <div class="card card-primary card-outline mt-4 border-primary">

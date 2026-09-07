@@ -27,7 +27,10 @@ def add():
             end_date=form.end_date.data,
             daily_rate=form.daily_rate.data,
             status=form.status.data,
-            notes=form.notes.data
+            notes=form.notes.data,
+            trasferta_transport=form.trasferta_transport.data,
+            trasferta_meal=form.trasferta_meal.data,
+            trasferta_extra=form.trasferta_extra.data
         )
         db.session.add(project)
         db.session.commit()

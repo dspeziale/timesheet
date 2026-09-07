@@ -45,7 +45,48 @@ def _billable_days_span(last_worked, project, month_start, month_end, ferie_entr
     return max(days, 0)
 
 
-def _group_by_customer(projects, month_start, month_end, ferie_entries):
+def _trasferta_expenses(timesheets):
+    """Spese rimborsabili per ogni giorno registrato come trasferta.
+
+    Gli importi sono quelli configurati sulla commessa (trasporto, pranzo/cena,
+    extra diaria) e maturano una volta per giornata: se un giorno risulta
+    spezzato su piu' voci, le spese vengono conteggiate una sola volta e
+    attribuite al progetto della prima voce registrata."""
+    rows = []
+    charged_days = set()
+    entries = sorted(
+        (t for t in timesheets if t.is_trasferta and not t.is_ferie and t.project),
+        key=lambda t: (t.work_date, t.id)
+    )
+    for t in entries:
+        if t.work_date in charged_days:
+            continue
+        charged_days.add(t.work_date)
+        transport = float(t.project.trasferta_transport or 0)
+        meal = float(t.project.trasferta_meal or 0)
+        extra = float(t.project.trasferta_extra or 0)
+        rows.append({
+            'date': t.work_date,
+            'project': t.project,
+            'customer': t.project.customer,
+            'transport': transport,
+            'meal': meal,
+            'extra': extra,
+            'total': transport + meal + extra,
+        })
+    return rows
+
+
+def _expenses_by_customer(expense_rows):
+    """Totale spese di trasferta per cliente, per la riga di riepilogo."""
+    totals = {}
+    for r in expense_rows:
+        cid = r['customer'].id
+        totals[cid] = totals.get(cid, 0.0) + r['total']
+    return totals
+
+
+def _group_by_customer(projects, month_start, month_end, ferie_entries, expenses_by_customer=None):
     """Raggruppa le voci per progetto in una riga per cliente. I giorni e le
     settimane NON vengono sommati commessa per commessa (creerebbe doppio
     conteggio): si calcola un unico periodo per cliente, dall'inizio della prima
@@ -90,6 +131,7 @@ def _group_by_customer(projects, month_start, month_end, ferie_entries):
             # Tariffe diverse tra commesse: ripiego sulla somma per progetto
             total = sum(it['total'] for it in g['projects'])
 
+        expenses = (expenses_by_customer or {}).get(g['customer'].id, 0.0)
         rows.append({
             'customer': g['customer'],
             'code': ', '.join(g['codes']),
@@ -98,6 +140,8 @@ def _group_by_customer(projects, month_start, month_end, ferie_entries):
             'days': days,
             'total': total,
             'rate': single_rate,
+            'expenses': expenses,
+            'total_with_expenses': total + expenses,
         })
     rows.sort(key=lambda x: x['customer'].company_name)
     return rows
@@ -142,8 +186,14 @@ def monthly():
         item['days'] = _billable_days_span(item['last_worked'], item['project'], month_start, month_end, ferie_entries)
         item['total'] = item['days'] * float(item['rate'])
 
-    summary = _group_by_customer(projects, month_start, month_end, ferie_entries)
+    # Spese di trasferta: una riga per ogni giorno registrato come trasferta
+    expense_rows = _trasferta_expenses(timesheets)
+    total_expenses = sum(r['total'] for r in expense_rows)
+
+    summary = _group_by_customer(projects, month_start, month_end, ferie_entries,
+                                 _expenses_by_customer(expense_rows))
     total_general = sum(item['total'] for item in summary)
+    total_with_expenses = total_general + total_expenses
 
     total_net = total_general * 0.73
 
@@ -178,6 +228,9 @@ def monthly():
                            month=month,
                            total_general=total_general,
                            total_net=total_net,
+                           expense_rows=expense_rows,
+                           total_expenses=total_expenses,
+                           total_with_expenses=total_with_expenses,
                            tax_simulator=tax_simulator)
 
 @reports_bp.route('/export_excel', methods=['GET'])
@@ -191,6 +244,9 @@ def export_excel():
         db.extract('month', TimesheetEntry.work_date) == month
     ).all()
 
+    # Spese di trasferta, gia' deduplicate per giornata
+    expenses_by_date = {r['date']: r for r in _trasferta_expenses(timesheets)}
+
     data = []
     for t in timesheets:
         if t.is_ferie or not t.project:
@@ -203,9 +259,17 @@ def export_excel():
                 'Tariffa': 0,
                 'Totale': 0,
                 'Attività': '',
-                'Luogo': 'Ferie'
+                'Luogo': 'Ferie',
+                'Trasporto': 0,
+                'Pranzo/Cena': 0,
+                'Extra Diaria': 0,
+                'Spese Trasferta': 0
             })
             continue
+        # Le spese sono attribuite alla prima voce della giornata di trasferta
+        exp = expenses_by_date.get(t.work_date)
+        if exp is None or exp['project'].id != t.project_id:
+            exp = None
         data.append({
             'Data': t.work_date.strftime('%Y-%m-%d'),
             'Cliente': t.project.customer.company_name,
@@ -215,8 +279,14 @@ def export_excel():
             'Tariffa': float(t.project.daily_rate),
             'Totale': float(t.days_worked) * float(t.project.daily_rate),
             'Attività': t.activity.name if t.activity else '',
-            'Luogo': 'Smartworking' if t.is_smartworking else ('Trasferta' if t.is_trasferta else 'Sede')
+            'Luogo': 'Smartworking' if t.is_smartworking else ('Trasferta' if t.is_trasferta else 'Sede'),
+            'Trasporto': exp['transport'] if exp else 0,
+            'Pranzo/Cena': exp['meal'] if exp else 0,
+            'Extra Diaria': exp['extra'] if exp else 0,
+            'Spese Trasferta': exp['total'] if exp else 0
         })
+        if exp:
+            expenses_by_date.pop(t.work_date, None)
 
     df = pd.DataFrame(data)
     
@@ -268,8 +338,13 @@ def export_pdf():
         item['days'] = _billable_days_span(item['last_worked'], item['project'], month_start, month_end, ferie_entries)
         item['total'] = item['days'] * float(item['rate'])
 
-    summary = _group_by_customer(projects, month_start, month_end, ferie_entries)
+    expense_rows = _trasferta_expenses(timesheets)
+    total_expenses = sum(r['total'] for r in expense_rows)
+
+    summary = _group_by_customer(projects, month_start, month_end, ferie_entries,
+                                 _expenses_by_customer(expense_rows))
     total_general = sum(item['total'] for item in summary)
+    total_with_expenses = total_general + total_expenses
 
     total_net = total_general * 0.73
 
@@ -281,7 +356,10 @@ def export_pdf():
                            year=year,
                            month=month,
                            total_general=total_general,
-                           total_net=total_net)
+                           total_net=total_net,
+                           expense_rows=expense_rows,
+                           total_expenses=total_expenses,
+                           total_with_expenses=total_with_expenses)
 
 @reports_bp.route('/export_pdf_week', methods=['GET'])
 @login_required
