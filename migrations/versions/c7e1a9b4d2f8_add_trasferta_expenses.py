@@ -15,19 +15,36 @@ down_revision = 'a1b2c3d4e5f6'
 branch_labels = None
 depends_on = None
 
+COLUMNS = ('trasferta_transport', 'trasferta_meal', 'trasferta_extra')
+
+
+def _existing_columns():
+    """Colonne gia' presenti sulla tabella projects.
+
+    In produzione (Vercel) le colonne possono essere state aggiunte
+    automaticamente all'avvio dell'app da _sync_missing_columns(): la migration
+    deve restare applicabile anche in quel caso.
+    """
+    bind = op.get_bind()
+    return {c['name'] for c in sa.inspect(bind).get_columns('projects')}
+
 
 def upgrade():
+    present = _existing_columns()
+    missing = [c for c in COLUMNS if c not in present]
+    if not missing:
+        return
     with op.batch_alter_table('projects', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('trasferta_transport', sa.Numeric(10, 2),
-                                      nullable=False, server_default='0'))
-        batch_op.add_column(sa.Column('trasferta_meal', sa.Numeric(10, 2),
-                                      nullable=False, server_default='0'))
-        batch_op.add_column(sa.Column('trasferta_extra', sa.Numeric(10, 2),
-                                      nullable=False, server_default='0'))
+        for name in missing:
+            batch_op.add_column(sa.Column(name, sa.Numeric(10, 2),
+                                          nullable=False, server_default='0'))
 
 
 def downgrade():
+    present = _existing_columns()
+    to_drop = [c for c in reversed(COLUMNS) if c in present]
+    if not to_drop:
+        return
     with op.batch_alter_table('projects', schema=None) as batch_op:
-        batch_op.drop_column('trasferta_extra')
-        batch_op.drop_column('trasferta_meal')
-        batch_op.drop_column('trasferta_transport')
+        for name in to_drop:
+            batch_op.drop_column(name)

@@ -20,6 +20,53 @@ login = LoginManager()
 login.login_view = 'auth.login'
 login.login_message = 'Please log in to access this page.'
 
+
+def _sync_missing_columns():
+    """Aggiunge al database le colonne dichiarate nei modelli ma non ancora
+    presenti nelle tabelle esistenti.
+
+    Su Vercel non c'e' modo di lanciare `flask db upgrade` a mano e
+    db.create_all() crea soltanto le tabelle mancanti, non le colonne nuove:
+    senza questo passaggio un deploy che aggiunge un campo fa fallire ogni
+    query su quella tabella. Vengono aggiunte solo colonne nullable oppure
+    con un server_default, cosi' l'ALTER e' sempre applicabile.
+    """
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(db.engine)
+    existing_tables = set(inspector.get_table_names())
+
+    for table in db.metadata.sorted_tables:
+        if table.name not in existing_tables:
+            continue  # ci pensa db.create_all()
+        present = {c['name'] for c in inspector.get_columns(table.name)}
+        for column in table.columns:
+            if column.name in present:
+                continue
+            if column.server_default is None and not column.nullable:
+                # Non si puo' aggiungere una colonna NOT NULL senza default:
+                # serve una migration scritta a mano.
+                print("Colonna %s.%s non aggiunta automaticamente: NOT NULL senza default."
+                      % (table.name, column.name))
+                continue
+
+            ddl = 'ALTER TABLE %s ADD COLUMN %s %s' % (
+                table.name, column.name, column.type.compile(db.engine.dialect)
+            )
+            if column.server_default is not None:
+                ddl += ' DEFAULT %s' % column.server_default.arg
+                if not column.nullable:
+                    ddl += ' NOT NULL'
+
+            try:
+                db.session.execute(text(ddl))
+                db.session.commit()
+                print("Colonna aggiunta: %s.%s" % (table.name, column.name))
+            except Exception as e:
+                db.session.rollback()
+                print("Errore aggiungendo %s.%s: %s" % (table.name, column.name, e))
+
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -77,5 +124,9 @@ def create_app(config_class=Config):
             db.create_all()
         except Exception as e:
             print("Errore nella creazione tabelle:", e)
+        try:
+            _sync_missing_columns()
+        except Exception as e:
+            print("Errore nell'allineamento delle colonne:", e)
 
     return app
