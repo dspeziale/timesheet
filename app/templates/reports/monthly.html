@@ -153,10 +153,20 @@
                         <td colspan="3"><i class="bi bi-box-arrow-in-right"></i> DATI DI INPUT</td>
                     </tr>
                     <tr>
-                        <td class="w-50">Fatturato mensile lordo</td>
-                        <td class="text-end fw-bold text-primary w-25" style="background-color: #fff3cd;">€ {{
-                            total_general|format_currency }}</td>
-                        <td class="text-muted small w-25"></td>
+                        <td class="w-50">Compensi (giornate fatturabili)</td>
+                        <td class="text-end w-25">€ {{ tax_simulator.compensi|format_currency }}</td>
+                        <td class="text-muted small w-25" style="font-style: italic;">Giorni × Tariffa</td>
+                    </tr>
+                    <tr>
+                        <td>Rimborsi spese di trasferta</td>
+                        <td class="text-end">€ {{ tax_simulator.spese_trasferta|format_currency }}</td>
+                        <td class="text-muted small" style="font-style: italic;">Concorrono al fatturato</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">Fatturato mensile lordo</td>
+                        <td class="text-end fw-bold text-primary" style="background-color: #fff3cd;">€ {{
+                            tax_simulator.fatturato_lordo|format_currency }}</td>
+                        <td class="text-muted small" style="font-style: italic;">Compensi + Rimborsi</td>
                     </tr>
                     <tr>
                         <td>Coefficiente di redditività</td>
@@ -227,8 +237,8 @@
                         <td colspan="3"><i class="bi bi-cash-stack"></i> NETTO IN TASCA</td>
                     </tr>
                     <tr style="background-color: #e2efda;">
-                        <td>Fatturato lordo</td>
-                        <td class="text-end">€ {{ total_general|format_currency }}</td>
+                        <td>Fatturato lordo (compensi + rimborsi)</td>
+                        <td class="text-end">€ {{ tax_simulator.fatturato_lordo|format_currency }}</td>
                         <td></td>
                     </tr>
                     <tr style="background-color: #e2efda;">

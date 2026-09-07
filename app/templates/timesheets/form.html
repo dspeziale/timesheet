@@ -56,6 +56,51 @@
                         {{ form.is_trasferta(class="form-check-input") }}
                         {{ form.is_trasferta.label(class="form-check-label") }}
                     </div>
+                    <div class="mb-3 border rounded p-3 bg-body-tertiary" id="trasfertaBox" hidden>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold"><i class="bi bi-car-front"></i> Spese della giornata</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnResetTrasferta"
+                                    title="Ripristina gli importi previsti dalla commessa">
+                                <i class="bi bi-arrow-counterclockwise"></i> Valori commessa
+                            </button>
+                        </div>
+                        <p class="text-muted small mb-2" id="trasfertaHint"></p>
+                        <div class="row g-2">
+                            <div class="col-sm-4">
+                                {{ form.trasferta_transport.label(class="form-label small mb-1") }}
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">€</span>
+                                    {{ form.trasferta_transport(class="form-control", step="0.01", min="0") }}
+                                </div>
+                                {% for error in form.trasferta_transport.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-sm-4">
+                                {{ form.trasferta_meal.label(class="form-label small mb-1") }}
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">€</span>
+                                    {{ form.trasferta_meal(class="form-control", step="0.01", min="0") }}
+                                </div>
+                                {% for error in form.trasferta_meal.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-sm-4">
+                                {{ form.trasferta_extra.label(class="form-label small mb-1") }}
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">€</span>
+                                    {{ form.trasferta_extra(class="form-control", step="0.01", min="0") }}
+                                </div>
+                                {% for error in form.trasferta_extra.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="mt-2 text-end fw-bold">
+                            Totale giornata: <span id="trasfertaTotal">€ 0,00</span>
+                        </div>
+                    </div>
                     <div class="mb-3">
                         {{ form.notes.label(class="form-label") }}
                         {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=4) }}
@@ -117,6 +162,88 @@
 
         isFerie.addEventListener('change', applyFerieState);
         applyFerieState();
+
+        // --- Spese di trasferta: proposte dalla commessa, confermate dall'utente ---
+        const rates = {{ (trasferta_rates or {})|tojson }};
+        const trasfertaBox = document.getElementById('trasfertaBox');
+        const trasfertaHint = document.getElementById('trasfertaHint');
+        const trasfertaTotal = document.getElementById('trasfertaTotal');
+        const btnReset = document.getElementById('btnResetTrasferta');
+        const expenseInputs = {
+            transport: document.getElementById('trasferta_transport'),
+            meal: document.getElementById('trasferta_meal'),
+            extra: document.getElementById('trasferta_extra')
+        };
+
+        function euro(n) {
+            return '€ ' + n.toFixed(2).replace('.', ',');
+        }
+
+        function currentRates() {
+            return rates[projectSelect && projectSelect.value] || null;
+        }
+
+        function updateTotal() {
+            let total = 0;
+            Object.values(expenseInputs).forEach(function(el) {
+                if (el) total += parseFloat(el.value) || 0;
+            });
+            trasfertaTotal.textContent = euro(total);
+        }
+
+        // Riporta negli input gli importi previsti dalla commessa selezionata
+        function proposeFromProject() {
+            const r = currentRates();
+            if (!r) {
+                trasfertaHint.textContent = 'Seleziona un progetto per avere gli importi proposti.';
+                return;
+            }
+            expenseInputs.transport.value = r.transport.toFixed(2);
+            expenseInputs.meal.value = r.meal.toFixed(2);
+            expenseInputs.extra.value = r.extra.toFixed(2);
+            updateTotal();
+        }
+
+        function updateHint() {
+            const r = currentRates();
+            if (!r) {
+                trasfertaHint.textContent = 'Seleziona un progetto per avere gli importi proposti.';
+                return;
+            }
+            const tot = r.transport + r.meal + r.extra;
+            trasfertaHint.textContent = tot > 0
+                ? 'Importi proposti dalla commessa (' + euro(tot) + ' al giorno). Confermali o correggili.'
+                : 'Questa commessa non ha spese di trasferta configurate: inserisci gli importi a mano.';
+        }
+
+        function applyTrasfertaState(propose) {
+            const on = trasferta.checked && !isFerie.checked;
+            trasfertaBox.hidden = !on;
+            if (!on) return;
+            updateHint();
+            if (propose) proposeFromProject();
+            updateTotal();
+        }
+
+        if (trasferta && trasfertaBox) {
+            // Alla spunta della trasferta gli importi vengono proposti;
+            // in modifica, all'apertura, si mostrano quelli gia' salvati.
+            trasferta.addEventListener('change', function() { applyTrasfertaState(true); });
+            isFerie.addEventListener('change', function() { applyTrasfertaState(false); });
+            if (projectSelect) {
+                projectSelect.addEventListener('change', function() { applyTrasfertaState(true); });
+            }
+            if (btnReset) {
+                btnReset.addEventListener('click', function() {
+                    proposeFromProject();
+                    updateHint();
+                });
+            }
+            Object.values(expenseInputs).forEach(function(el) {
+                if (el) el.addEventListener('input', updateTotal);
+            });
+            applyTrasfertaState(false);
+        }
 
         // Riabilita i campi disabilitati al submit così i valori vengono inviati
         const ferieForm = isFerie.closest('form');

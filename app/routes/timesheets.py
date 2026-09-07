@@ -29,6 +29,19 @@ IT_ACTIVITIES = [
     'Aggiornamento delle librerie e gestione delle dipendenze',
 ]
 
+
+def _project_trasferta_rates(projects):
+    """Spese di trasferta configurate su ogni commessa, per la proposta nel form."""
+    return {
+        p.id: {
+            'transport': float(p.trasferta_transport or 0),
+            'meal': float(p.trasferta_meal or 0),
+            'extra': float(p.trasferta_extra or 0),
+        }
+        for p in projects
+    }
+
+
 @timesheets_bp.route('/')
 @login_required
 def index():
@@ -112,7 +125,9 @@ def fill_month():
 @login_required
 def add():
     form = TimesheetForm()
-    form.project_id.choices = [(p.id, p.name) for p in Project.query.filter_by(status='Attivo').all()]
+    active_projects = Project.query.filter_by(status='Attivo').all()
+    form.project_id.choices = [(p.id, p.name) for p in active_projects]
+    trasferta_rates = _project_trasferta_rates(active_projects)
     if form.validate_on_submit():
         # Check max 1.0 day per date
         work_date = form.work_date.data
@@ -125,7 +140,7 @@ def add():
 
         if current_total + days_to_add > 1.0:
             flash(f'Errore: per il {work_date.strftime("%d/%m/%Y")} risultano già {current_total} giornate registrate. Non è possibile superare 1.0.', 'danger')
-            return render_template('timesheets/form.html', title='Nuovo Timesheet', form=form)
+            return render_template('timesheets/form.html', title='Nuovo Timesheet', form=form, trasferta_rates=trasferta_rates)
 
         # Se ferie: azzera tutti gli altri campi. Altrimenti progetto e attività sono obbligatori.
         activity_id = None
@@ -133,11 +148,11 @@ def add():
         if not is_ferie:
             if not form.project_id.data:
                 flash('Seleziona un progetto oppure spunta Ferie.', 'danger')
-                return render_template('timesheets/form.html', title='Nuovo Timesheet', form=form)
+                return render_template('timesheets/form.html', title='Nuovo Timesheet', form=form, trasferta_rates=trasferta_rates)
             activity_name_input = (form.activity_name.data or '').strip()
             if not activity_name_input:
                 flash("L'attività è obbligatoria per le giornate lavorate.", 'danger')
-                return render_template('timesheets/form.html', title='Nuovo Timesheet', form=form)
+                return render_template('timesheets/form.html', title='Nuovo Timesheet', form=form, trasferta_rates=trasferta_rates)
             project_id = form.project_id.data
             activity = Activity.query.filter_by(name=activity_name_input).first()
             if not activity:
@@ -146,14 +161,19 @@ def add():
                 db.session.flush() # Get the ID before committing
             activity_id = activity.id
 
+        is_trasferta = False if is_ferie else form.is_trasferta.data
         entry = TimesheetEntry(
             work_date=work_date,
             project_id=project_id,
             days_worked=days_value,
             activity_id=activity_id,
             is_smartworking=False if is_ferie else form.is_smartworking.data,
-            is_trasferta=False if is_ferie else form.is_trasferta.data,
+            is_trasferta=is_trasferta,
             is_ferie=is_ferie,
+            # Le spese si conservano solo sulle giornate di trasferta
+            trasferta_transport=form.trasferta_transport.data if is_trasferta else 0,
+            trasferta_meal=form.trasferta_meal.data if is_trasferta else 0,
+            trasferta_extra=form.trasferta_extra.data if is_trasferta else 0,
             notes=form.notes.data
         )
         db.session.add(entry)
@@ -175,7 +195,7 @@ def add():
     activities = Activity.query.filter_by(active=True).order_by(Activity.name).all()
     form.activity_select.choices = [('', '--- Scegli una precedente ---')] + [(a.name, a.name[:50] + ('...' if len(a.name)>50 else '')) for a in activities]
 
-    return render_template('timesheets/form.html', title='Nuovo Timesheet', form=form)
+    return render_template('timesheets/form.html', title='Nuovo Timesheet', form=form, trasferta_rates=trasferta_rates)
 
 @timesheets_bp.route('/delete/<int:id>', methods=['POST'])
 @login_required
@@ -191,7 +211,9 @@ def delete(id):
 def edit(id):
     entry = TimesheetEntry.query.get_or_404(id)
     form = TimesheetForm()
-    form.project_id.choices = [(p.id, p.name) for p in Project.query.filter_by(status='Attivo').all()]
+    active_projects = Project.query.filter_by(status='Attivo').all()
+    form.project_id.choices = [(p.id, p.name) for p in active_projects]
+    trasferta_rates = _project_trasferta_rates(active_projects)
     
     if form.validate_on_submit():
         work_date = form.work_date.data
@@ -210,7 +232,7 @@ def edit(id):
             flash(f'Errore: per il {work_date.strftime("%d/%m/%Y")} risultano già {current_total} giornate registrate da altre voci. Non è possibile superare 1.0.', 'danger')
             activities = Activity.query.filter_by(active=True).order_by(Activity.name).all()
             activity_names = [a.name for a in activities]
-            return render_template('timesheets/form.html', title='Modifica Timesheet', form=form, activity_names=activity_names)
+            return render_template('timesheets/form.html', title='Modifica Timesheet', form=form, activity_names=activity_names, trasferta_rates=trasferta_rates)
 
         # Se ferie: azzera tutti gli altri campi. Altrimenti progetto e attività sono obbligatori.
         activity_id = None
@@ -218,11 +240,11 @@ def edit(id):
         if not is_ferie:
             if not form.project_id.data:
                 flash('Seleziona un progetto oppure spunta Ferie.', 'danger')
-                return render_template('timesheets/form.html', title='Modifica Timesheet', form=form)
+                return render_template('timesheets/form.html', title='Modifica Timesheet', form=form, trasferta_rates=trasferta_rates)
             activity_name_input = (form.activity_name.data or '').strip()
             if not activity_name_input:
                 flash("L'attività è obbligatoria per le giornate lavorate.", 'danger')
-                return render_template('timesheets/form.html', title='Modifica Timesheet', form=form)
+                return render_template('timesheets/form.html', title='Modifica Timesheet', form=form, trasferta_rates=trasferta_rates)
             project_id = form.project_id.data
             activity = Activity.query.filter_by(name=activity_name_input).first()
             if not activity:
@@ -238,6 +260,10 @@ def edit(id):
         entry.is_smartworking = False if is_ferie else form.is_smartworking.data
         entry.is_trasferta = False if is_ferie else form.is_trasferta.data
         entry.is_ferie = is_ferie
+        # Le spese si conservano solo sulle giornate di trasferta
+        entry.trasferta_transport = form.trasferta_transport.data if entry.is_trasferta else 0
+        entry.trasferta_meal = form.trasferta_meal.data if entry.is_trasferta else 0
+        entry.trasferta_extra = form.trasferta_extra.data if entry.is_trasferta else 0
         entry.notes = form.notes.data
 
         db.session.commit()
@@ -252,12 +278,15 @@ def edit(id):
         form.is_smartworking.data = entry.is_smartworking
         form.is_trasferta.data = entry.is_trasferta
         form.is_ferie.data = entry.is_ferie
+        form.trasferta_transport.data = entry.trasferta_transport
+        form.trasferta_meal.data = entry.trasferta_meal
+        form.trasferta_extra.data = entry.trasferta_extra
         form.notes.data = entry.notes
 
     activities = Activity.query.filter_by(active=True).order_by(Activity.name).all()
     form.activity_select.choices = [('', '--- Scegli una precedente ---')] + [(a.name, a.name[:50] + ('...' if len(a.name)>50 else '')) for a in activities]
         
-    return render_template('timesheets/form.html', title='Modifica Timesheet', form=form)
+    return render_template('timesheets/form.html', title='Modifica Timesheet', form=form, trasferta_rates=trasferta_rates)
 
 @timesheets_bp.route('/calendar', methods=['GET'])
 @login_required

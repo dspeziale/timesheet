@@ -48,10 +48,11 @@ def _billable_days_span(last_worked, project, month_start, month_end, ferie_entr
 def _trasferta_expenses(timesheets):
     """Spese rimborsabili per ogni giorno registrato come trasferta.
 
-    Gli importi sono quelli configurati sulla commessa (trasporto, pranzo/cena,
-    extra diaria) e maturano una volta per giornata: se un giorno risulta
-    spezzato su piu' voci, le spese vengono conteggiate una sola volta e
-    attribuite al progetto della prima voce registrata."""
+    Gli importi sono quelli confermati sulla singola voce di timesheet
+    (proposti dalla commessa al momento dell'inserimento, ma correggibili
+    giornata per giornata) e maturano una volta per giornata: se un giorno
+    risulta spezzato su piu' voci, le spese vengono conteggiate una sola volta,
+    prendendo quelle della prima voce registrata."""
     rows = []
     charged_days = set()
     entries = sorted(
@@ -62,9 +63,9 @@ def _trasferta_expenses(timesheets):
         if t.work_date in charged_days:
             continue
         charged_days.add(t.work_date)
-        transport = float(t.project.trasferta_transport or 0)
-        meal = float(t.project.trasferta_meal or 0)
-        extra = float(t.project.trasferta_extra or 0)
+        transport = float(t.trasferta_transport or 0)
+        meal = float(t.trasferta_meal or 0)
+        extra = float(t.trasferta_extra or 0)
         rows.append({
             'date': t.work_date,
             'project': t.project,
@@ -195,21 +196,28 @@ def monthly():
     total_general = sum(item['total'] for item in summary)
     total_with_expenses = total_general + total_expenses
 
-    total_net = total_general * 0.73
+    total_net = total_with_expenses * 0.73
 
     # Simulatore Fiscale - Regime Forfettario
+    # La base imponibile e' il fatturato lordo complessivo: compensi piu' i
+    # rimborsi delle spese di trasferta, che concorrono al fatturato.
+    fatturato_lordo = total_with_expenses
+
     coeff_redditivita = current_app.config.get('TAX_COEFF_REDDITIVITA', 0.67)
     aliquota_inps = current_app.config.get('TAX_ALIQUOTA_INPS', 0.2623)
     aliquota_imposta = current_app.config.get('TAX_ALIQUOTA_IMPOSTA', 0.15)
 
-    reddito_imponibile_lordo = total_general * coeff_redditivita
+    reddito_imponibile_lordo = fatturato_lordo * coeff_redditivita
     contributi_inps = reddito_imponibile_lordo * aliquota_inps
     reddito_imponibile_fiscale = reddito_imponibile_lordo - contributi_inps
     imposta_sostitutiva = reddito_imponibile_fiscale * aliquota_imposta
     totale_da_pagare = contributi_inps + imposta_sostitutiva
-    netto_in_tasca = total_general - contributi_inps - imposta_sostitutiva
+    netto_in_tasca = fatturato_lordo - contributi_inps - imposta_sostitutiva
 
     tax_simulator = {
+        'fatturato_lordo': fatturato_lordo,
+        'compensi': total_general,
+        'spese_trasferta': total_expenses,
         'coeff_redditivita': coeff_redditivita,
         'aliquota_inps': aliquota_inps,
         'aliquota_imposta': aliquota_imposta,
