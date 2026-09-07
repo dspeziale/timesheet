@@ -28,6 +28,10 @@
                     class="btn btn-danger btn-sm flex-fill text-nowrap">
                     <i class="bi bi-file-earmark-pdf"></i> PDF Week
                 </a>
+                <button type="button" class="btn btn-primary btn-sm flex-fill text-nowrap"
+                    data-bs-toggle="modal" data-bs-target="#invoiceModal">
+                    <i class="bi bi-receipt"></i> Dati Fattura
+                </button>
             </div>
         </div>
     </div>
@@ -262,4 +266,61 @@
     </div>
 </div>
 {% endif %}
+<!-- Dati per la fattura elettronica -->
+<div class="modal fade" id="invoiceModal" tabindex="-1" aria-labelledby="invoiceModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="GET" action="{{ url_for('reports.export_invoice_pdf') }}" target="_blank">
+      <input type="hidden" name="year" value="{{ year }}">
+      <input type="hidden" name="month" value="{{ month }}">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="invoiceModalLabel">
+            <i class="bi bi-receipt"></i> Dati per Fattura Elettronica
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+        </div>
+        <div class="modal-body">
+          <p>
+            Genera un PDF con tutti i campi da riportare nella procedura di fattura
+            elettronica dell'Agenzia delle Entrate, per la competenza
+            <strong>{{ month }}/{{ year }}</strong>. Una pagina per ogni cliente da fatturare.
+          </p>
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label for="invoice-date" class="form-label">Data documento</label>
+              <input type="date" class="form-control" id="invoice-date" name="date"
+                     value="{{ today }}">
+            </div>
+            <div class="col-sm-6">
+              <label for="invoice-number" class="form-label">Numero di partenza</label>
+              <div class="input-group">
+                {% if settings.invoice_prefix %}
+                <span class="input-group-text">{{ settings.invoice_prefix }}</span>
+                {% endif %}
+                <input type="number" min="1" class="form-control" id="invoice-number"
+                       name="number" value="{{ settings.invoice_next_number or 1 }}">
+              </div>
+            </div>
+          </div>
+          {% if not settings.partita_iva %}
+          <div class="alert alert-warning mt-3 mb-0">
+            <i class="bi bi-exclamation-triangle"></i>
+            I dati della tua azienda non sono ancora configurati: il PDF uscira' incompleto.
+            Compilali in <a href="{{ url_for('settings.index') }}">Impostazioni</a>.
+          </div>
+          {% endif %}
+        </div>
+        <div class="modal-footer">
+          <a href="{{ url_for('settings.index') }}" class="btn btn-outline-secondary me-auto">
+            <i class="bi bi-gear"></i> Impostazioni
+          </a>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-download"></i> Scarica PDF
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}

@@ -21,6 +21,28 @@ login.login_view = 'auth.login'
 login.login_message = 'Please log in to access this page.'
 
 
+def _sql_default(column):
+    """Rende il server_default di una colonna come letterale SQL.
+
+    Il tipo della colonna decide la forma del letterale: senza quotatura un
+    default testuale produce SQL invalido (o viene letto come numero, e
+    '0000000' diventerebbe 0), mentre un booleano scritto come 1/0 viene
+    rifiutato da PostgreSQL.
+    """
+    from sqlalchemy import Boolean, Integer, Numeric, Float
+
+    raw = column.server_default.arg
+    value = str(getattr(raw, 'text', raw)).strip()
+
+    if isinstance(column.type, Boolean):
+        return 'TRUE' if value.lower() in ('1', 'true', 't', 'yes') else 'FALSE'
+    if isinstance(column.type, (Integer, Numeric, Float)):
+        return value
+    if value.startswith("'") and value.endswith("'"):
+        return value  # gia' un letterale SQL
+    return "'" + value.replace("'", "''") + "'"
+
+
 def _sync_missing_columns():
     """Aggiunge al database le colonne dichiarate nei modelli ma non ancora
     presenti nelle tabelle esistenti.
@@ -54,7 +76,7 @@ def _sync_missing_columns():
                 table.name, column.name, column.type.compile(db.engine.dialect)
             )
             if column.server_default is not None:
-                ddl += ' DEFAULT %s' % column.server_default.arg
+                ddl += ' DEFAULT %s' % _sql_default(column)
                 if not column.nullable:
                     ddl += ' NOT NULL'
 
@@ -93,6 +115,9 @@ def create_app(config_class=Config):
 
     from app.routes.reports import reports_bp
     app.register_blueprint(reports_bp)
+
+    from app.routes.settings import settings_bp
+    app.register_blueprint(settings_bp)
 
     @app.template_filter('ita_day')
     def ita_day(date):

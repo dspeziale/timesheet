@@ -52,6 +52,20 @@
                         {% endfor %}
                     </div>
                     <div class="mb-3">
+                        {{ form.sdi_code.label(class="form-label") }}
+                        {{ form.sdi_code(class="form-control" + (" is-invalid" if form.sdi_code.errors else "")) }}
+                        {% for error in form.sdi_code.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.pec.label(class="form-label") }}
+                        {{ form.pec(class="form-control" + (" is-invalid" if form.pec.errors else "")) }}
+                        {% for error in form.pec.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3">
                         {{ form.address.label(class="form-label") }}
                         {{ form.address(class="form-control" + (" is-invalid" if form.address.errors else "")) }}
                         {% for error in form.address.errors %}

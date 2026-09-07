@@ -26,6 +26,8 @@ def add():
             zip_code=form.zip_code.data,
             email=form.email.data,
             phone=form.phone.data,
+            sdi_code=form.sdi_code.data,
+            pec=form.pec.data,
             active=form.active.data
         )
         db.session.add(customer)

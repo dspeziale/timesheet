@@ -1,10 +1,12 @@
-from flask import Blueprint, render_template, request, Response, send_file, current_app
+from flask import (Blueprint, render_template, request, Response, send_file,
+                   current_app, flash, redirect, url_for)
 from flask_login import login_required
 from app import db
 from app.models.timesheet import TimesheetEntry
 from app.models.project import Project
 from app.models.customer import Customer
-from datetime import datetime, timedelta
+from app.models.settings import Settings
+from datetime import datetime, timedelta, date as date_cls
 import calendar
 import pandas as pd
 import io
@@ -12,6 +14,17 @@ from fpdf import FPDF
 from fpdf.fonts import FontFace
 
 reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
+
+
+def _latin1(value):
+    """I font core di fpdf2 supportano solo latin-1: i caratteri fuori set
+    vengono sostituiti invece di far fallire la generazione."""
+    return str(value).encode('latin-1', 'replace').decode('latin-1')
+
+
+def _eur(value):
+    """Importo in formato italiano, es. 1.234,56"""
+    return '{:,.2f}'.format(float(value or 0)).replace(',', 'X').replace('.', ',').replace('X', '.')
 
 
 def _weekdays_between(start, end):
@@ -147,54 +160,76 @@ def _group_by_customer(projects, month_start, month_end, ferie_entries, expenses
     rows.sort(key=lambda x: x['customer'].company_name)
     return rows
 
-@reports_bp.route('/monthly', methods=['GET'])
-@login_required
-def monthly():
-    year = request.args.get('year', datetime.now().year, type=int)
-    month = request.args.get('month', datetime.now().month, type=int)
+def _monthly_summary(year, month):
+    """Riepilogo del mese: righe per cliente, spese di trasferta e totali.
 
+    Logica condivisa da /monthly, dall'export PDF e dalla generazione dei dati
+    per la fattura elettronica, cosi' i tre restituiscono sempre gli stessi
+    numeri.
+    """
     timesheets = TimesheetEntry.query.filter(
         db.extract('year', TimesheetEntry.work_date) == year,
         db.extract('month', TimesheetEntry.work_date) == month
     ).all()
 
-    # Aggrega per progetto: si fatturano i giorni feriali continuativi dall'inizio
-    # della commessa fino all'ultimo giorno registrato nel mese (non serve
-    # registrare ogni giorno). Importo = giorni fatturabili x tariffa giornaliera.
-    summary = {}
+    # Si fatturano i giorni feriali continuativi dall'inizio della commessa fino
+    # all'ultimo giorno registrato nel mese: non serve registrare ogni giorno.
+    per_project = {}
     for t in timesheets:
         if t.is_ferie or not t.project:
             continue
         pid = t.project_id
         monday = t.work_date - timedelta(days=t.work_date.weekday())
-        if pid not in summary:
-            summary[pid] = {
+        if pid not in per_project:
+            per_project[pid] = {
                 'project': t.project,
                 'customer': t.project.customer,
                 'rate': t.project.daily_rate,
                 'mondays': set(),
                 'last_worked': t.work_date
             }
-        summary[pid]['mondays'].add(monday)
-        if t.work_date > summary[pid]['last_worked']:
-            summary[pid]['last_worked'] = t.work_date
+        per_project[pid]['mondays'].add(monday)
+        if t.work_date > per_project[pid]['last_worked']:
+            per_project[pid]['last_worked'] = t.work_date
 
     month_start = datetime(year, month, 1).date()
     month_end = datetime(year, month, calendar.monthrange(year, month)[1]).date()
     ferie_entries = [(t.work_date, float(t.days_worked)) for t in timesheets if t.is_ferie]
-    projects = list(summary.values())
+
+    projects = list(per_project.values())
     for item in projects:
-        item['days'] = _billable_days_span(item['last_worked'], item['project'], month_start, month_end, ferie_entries)
+        item['days'] = _billable_days_span(item['last_worked'], item['project'],
+                                           month_start, month_end, ferie_entries)
         item['total'] = item['days'] * float(item['rate'])
 
-    # Spese di trasferta: una riga per ogni giorno registrato come trasferta
     expense_rows = _trasferta_expenses(timesheets)
     total_expenses = sum(r['total'] for r in expense_rows)
 
     summary = _group_by_customer(projects, month_start, month_end, ferie_entries,
                                  _expenses_by_customer(expense_rows))
     total_general = sum(item['total'] for item in summary)
-    total_with_expenses = total_general + total_expenses
+
+    return {
+        'timesheets': timesheets,
+        'summary': summary,
+        'expense_rows': expense_rows,
+        'total_general': total_general,
+        'total_expenses': total_expenses,
+        'total_with_expenses': total_general + total_expenses,
+    }
+
+@reports_bp.route('/monthly', methods=['GET'])
+@login_required
+def monthly():
+    year = request.args.get('year', datetime.now().year, type=int)
+    month = request.args.get('month', datetime.now().month, type=int)
+
+    data = _monthly_summary(year, month)
+    summary = data['summary']
+    expense_rows = data['expense_rows']
+    total_general = data['total_general']
+    total_expenses = data['total_expenses']
+    total_with_expenses = data['total_with_expenses']
 
     total_net = total_with_expenses * 0.73
 
@@ -239,7 +274,9 @@ def monthly():
                            expense_rows=expense_rows,
                            total_expenses=total_expenses,
                            total_with_expenses=total_with_expenses,
-                           tax_simulator=tax_simulator)
+                           tax_simulator=tax_simulator,
+                           settings=Settings.get(),
+                           today=date_cls.today().strftime('%Y-%m-%d'))
 
 @reports_bp.route('/export_excel', methods=['GET'])
 @login_required
@@ -312,49 +349,15 @@ def export_pdf():
     year = request.args.get('year', datetime.now().year, type=int)
     month = request.args.get('month', datetime.now().month, type=int)
 
-    timesheets = TimesheetEntry.query.filter(
-        db.extract('year', TimesheetEntry.work_date) == year,
-        db.extract('month', TimesheetEntry.work_date) == month
-    ).order_by(TimesheetEntry.work_date).all()
+    data = _monthly_summary(year, month)
+    timesheets = sorted(data['timesheets'], key=lambda t: t.work_date)
+    summary = data['summary']
+    expense_rows = data['expense_rows']
+    total_general = data['total_general']
+    total_expenses = data['total_expenses']
+    total_with_expenses = data['total_with_expenses']
 
-    # Riepilogo per progetto (coerente con /monthly): giorni feriali continuativi
-    # dall'inizio commessa fino all'ultimo giorno registrato nel mese,
-    # importo = giorni fatturabili x tariffa giornaliera.
-    summary = {}
-    for t in timesheets:
-        if t.is_ferie or not t.project:
-            continue
-        pid = t.project_id
-        monday = t.work_date - timedelta(days=t.work_date.weekday())
-        if pid not in summary:
-            summary[pid] = {
-                'project': t.project,
-                'customer': t.project.customer,
-                'rate': t.project.daily_rate,
-                'mondays': set(),
-                'last_worked': t.work_date
-            }
-        summary[pid]['mondays'].add(monday)
-        if t.work_date > summary[pid]['last_worked']:
-            summary[pid]['last_worked'] = t.work_date
-
-    month_start = datetime(year, month, 1).date()
-    month_end = datetime(year, month, calendar.monthrange(year, month)[1]).date()
-    ferie_entries = [(t.work_date, float(t.days_worked)) for t in timesheets if t.is_ferie]
-    projects = list(summary.values())
-    for item in projects:
-        item['days'] = _billable_days_span(item['last_worked'], item['project'], month_start, month_end, ferie_entries)
-        item['total'] = item['days'] * float(item['rate'])
-
-    expense_rows = _trasferta_expenses(timesheets)
-    total_expenses = sum(r['total'] for r in expense_rows)
-
-    summary = _group_by_customer(projects, month_start, month_end, ferie_entries,
-                                 _expenses_by_customer(expense_rows))
-    total_general = sum(item['total'] for item in summary)
-    total_with_expenses = total_general + total_expenses
-
-    total_net = total_general * 0.73
+    total_net = total_with_expenses * 0.73
 
     # Invece di generare il PDF lato server (che richiede pycairo non compatibile con Vercel),
     # restituiamo un template HTML minimale con window.print()
@@ -550,3 +553,230 @@ def export_pdf_week():
     output.seek(0)
     filename = 'report_settimanale_%d_%02d.pdf' % (year, month)
     return send_file(output, as_attachment=True, download_name=filename, mimetype='application/pdf')
+
+
+def _invoice_lines(row, settings):
+    """Righe di dettaglio della fattura per un cliente del riepilogo.
+
+    Riga 1: la prestazione (giorni x tariffa). Riga 2: il rimborso delle spese
+    di trasferta, se presenti. Riga 3: la rivalsa INPS, se configurata.
+    """
+    lines = []
+    compensi = float(row['total'])
+    if row.get('rate') is not None:
+        quantita, prezzo = float(row['days']), float(row['rate'])
+    else:
+        # Tariffe diverse tra le commesse del cliente: si espone una riga a corpo
+        quantita, prezzo = 1.0, compensi
+    lines.append({
+        'descrizione': settings.descrizione_riga or 'Prestazione di servizi',
+        'quantita': quantita,
+        'prezzo': prezzo,
+        'importo': compensi,
+    })
+
+    spese = float(row.get('expenses') or 0)
+    if spese > 0:
+        lines.append({
+            'descrizione': settings.descrizione_spese or 'Rimborso spese di trasferta',
+            'quantita': 1.0,
+            'prezzo': spese,
+            'importo': spese,
+        })
+
+    rivalsa_pct = float(settings.rivalsa_inps_percent or 0)
+    if rivalsa_pct > 0:
+        rivalsa = (compensi + spese) * rivalsa_pct / 100.0
+        lines.append({
+            'descrizione': 'Rivalsa INPS ' + _eur(rivalsa_pct) + '%',
+            'quantita': 1.0,
+            'prezzo': rivalsa,
+            'importo': rivalsa,
+        })
+    return lines
+
+
+def _invoice_totals(lines, settings):
+    """Imponibile, bollo e totale del documento."""
+    imponibile = sum(l['importo'] for l in lines)
+    bollo = 0.0
+    if settings.bollo_enabled and imponibile > float(settings.bollo_soglia or 0):
+        bollo = float(settings.bollo_importo or 0)
+    totale = imponibile + (bollo if settings.bollo_a_carico_cliente else 0.0)
+    return {
+        'imponibile': imponibile,
+        'imposta': 0.0,
+        'bollo': bollo,
+        'bollo_a_carico_cliente': bool(settings.bollo_a_carico_cliente),
+        'totale': totale,
+    }
+
+
+def _pdf_section(pdf, titolo):
+    pdf.set_font('Helvetica', 'B', 9)
+    pdf.set_fill_color(226, 232, 243)
+    pdf.cell(0, 5.2, _latin1(titolo), new_x='LMARGIN', new_y='NEXT', fill=True, border=1)
+    pdf.set_font('Helvetica', '', 8)
+
+
+def _pdf_fields(pdf, coppie):
+    """Tabella etichetta/valore: il formato piu' comodo da ricopiare nel portale."""
+    with pdf.table(col_widths=(62, 128), first_row_as_headings=False,
+                   text_align=('LEFT', 'LEFT'), padding=(0.6, 1.5), line_height=4.2) as table:
+        for etichetta, valore in coppie:
+            r = table.row()
+            r.cell(_latin1(etichetta))
+            r.cell(_latin1(valore if valore not in (None, '') else '-'))
+
+
+@reports_bp.route('/export_invoice_pdf', methods=['GET'])
+@login_required
+def export_invoice_pdf():
+    """PDF con i campi da riportare nella procedura di fattura elettronica
+    dell'Agenzia delle Entrate: una pagina per ogni cliente da fatturare."""
+    year = request.args.get('year', datetime.now().year, type=int)
+    month = request.args.get('month', datetime.now().month, type=int)
+
+    settings = Settings.get()
+
+    # Data documento: oggi salvo diversa indicazione da querystring
+    data_arg = request.args.get('date')
+    try:
+        data_documento = datetime.strptime(data_arg, '%Y-%m-%d').date() if data_arg else date_cls.today()
+    except ValueError:
+        data_documento = date_cls.today()
+    scadenza = data_documento + timedelta(days=int(settings.giorni_scadenza or 0))
+
+    data = _monthly_summary(year, month)
+    summary = data['summary']
+    if not summary:
+        flash('Nessun dato da fatturare per %02d/%d.' % (month, year), 'warning')
+        return redirect(url_for('reports.monthly', year=year, month=month))
+
+    numero_base = request.args.get('number', settings.invoice_next_number or 1, type=int)
+
+    bold = FontFace(emphasis='BOLD')
+    pdf = FPDF(orientation='P', unit='mm', format='A4')
+    pdf.set_auto_page_break(auto=True, margin=10)
+
+    for indice, row in enumerate(summary):
+        cliente = row['customer']
+        lines = _invoice_lines(row, settings)
+        totals = _invoice_totals(lines, settings)
+        numero = (settings.invoice_prefix or '') + str(numero_base + indice)
+
+        pdf.add_page()
+        pdf.set_font('Helvetica', 'B', 12)
+        pdf.cell(0, 6, _latin1('Dati per Fattura Elettronica - Agenzia delle Entrate'),
+                 align='C', new_x='LMARGIN', new_y='NEXT')
+        pdf.set_font('Helvetica', '', 8)
+        pdf.cell(0, 4.5, _latin1('Competenza %02d/%d - %s' % (month, year, cliente.company_name)),
+                 align='C', new_x='LMARGIN', new_y='NEXT')
+        pdf.ln(2)
+
+        _pdf_section(pdf, '1. DATI DEL CEDENTE / PRESTATORE')
+        _pdf_fields(pdf, [
+            ('Denominazione', settings.intestazione),
+            ('Partita IVA', ((settings.nazione or 'IT') + ' ' + (settings.partita_iva or '')).strip()),
+            ('Codice Fiscale', settings.codice_fiscale),
+            ('Regime Fiscale', settings.regime_fiscale),
+            ('Indirizzo', settings.indirizzo_completo),
+            ('Nazione', settings.nazione),
+            ('Telefono / Email', ' - '.join(p for p in (settings.telefono, settings.email) if p)),
+            ('Iscrizione REA', ' - '.join(p for p in (settings.rea_ufficio, settings.rea_numero) if p)),
+        ])
+        pdf.ln(1)
+
+        _pdf_section(pdf, '2. DATI DEL CESSIONARIO / COMMITTENTE')
+        indirizzo_cliente = ', '.join(p for p in (
+            cliente.address,
+            ' '.join(x for x in (cliente.zip_code, cliente.city) if x)) if p)
+        _pdf_fields(pdf, [
+            ('Denominazione', cliente.company_name),
+            ('Partita IVA', cliente.vat_number),
+            ('Codice Fiscale', cliente.tax_code),
+            ('Indirizzo', indirizzo_cliente),
+            ('Codice Destinatario SDI', cliente.sdi_code or '0000000'),
+            ('PEC', cliente.pec),
+        ])
+        pdf.ln(1)
+
+        _pdf_section(pdf, '3. DATI GENERALI DEL DOCUMENTO')
+        _pdf_fields(pdf, [
+            ('Tipo Documento', settings.tipo_documento),
+            ('Divisa', 'EUR'),
+            ('Data Documento', data_documento.strftime('%d/%m/%Y')),
+            ('Numero Documento', numero),
+            ('Causale', 'Competenza %02d/%d - Commessa %s' % (month, year, row['code'])),
+        ])
+        pdf.ln(1)
+
+        _pdf_section(pdf, '4. RIGHE DI DETTAGLIO')
+        with pdf.table(col_widths=(86, 20, 28, 24, 32),
+                       text_align=('LEFT', 'RIGHT', 'RIGHT', 'CENTER', 'RIGHT'),
+                       padding=(0.6, 1.5), line_height=4.2) as table:
+            h = table.row()
+            for etichetta in ('Descrizione', 'Quantita', 'Prezzo Unit.', 'Natura', 'Importo'):
+                h.cell(_latin1(etichetta))
+            for l in lines:
+                r = table.row()
+                r.cell(_latin1(l['descrizione']))
+                r.cell(_eur(l['quantita']))
+                r.cell(_eur(l['prezzo']))
+                r.cell(_latin1(settings.natura_iva))
+                r.cell(_eur(l['importo']))
+        pdf.ln(1)
+
+        _pdf_section(pdf, '5. DATI RIEPILOGO - operazione senza applicazione IVA')
+        _pdf_fields(pdf, [
+            ('Aliquota IVA', '0,00%'),
+            ('Natura', settings.natura_iva),
+            ('Imponibile / Importo', _eur(totals['imponibile'])),
+            ('Imposta', _eur(totals['imposta'])),
+            ('Riferimento Normativo', settings.riferimento_normativo or ''),
+        ])
+        pdf.ln(1)
+
+        _pdf_section(pdf, '6. BOLLO')
+        if totals['bollo'] > 0:
+            _pdf_fields(pdf, [
+                ('Bollo Virtuale', 'SI'),
+                ('Importo Bollo', _eur(totals['bollo'])),
+                ('Addebitato al cliente', 'SI' if totals['bollo_a_carico_cliente'] else 'NO'),
+            ])
+        else:
+            _pdf_fields(pdf, [
+                ('Bollo Virtuale', 'NO'),
+                ('Motivo', 'Imponibile non superiore a ' + _eur(settings.bollo_soglia) + ' euro'),
+            ])
+        pdf.ln(1)
+
+        _pdf_section(pdf, '7. DATI DI PAGAMENTO')
+        _pdf_fields(pdf, [
+            ('Condizioni di Pagamento', settings.condizioni_pagamento),
+            ('Modalita di Pagamento', settings.modalita_pagamento),
+            ('Data Scadenza', scadenza.strftime('%d/%m/%Y')),
+            ('Importo Pagamento', _eur(totals['totale'])),
+            ('IBAN', settings.iban),
+            ('Istituto', settings.banca),
+        ])
+        pdf.ln(2)
+
+        with pdf.table(col_widths=(138, 52), first_row_as_headings=False,
+                       text_align=('RIGHT', 'RIGHT'), padding=(1, 1.5), line_height=5) as table:
+            r = table.row(style=bold)
+            r.cell(_latin1('TOTALE DOCUMENTO'))
+            r.cell(_eur(totals['totale']))
+
+        pdf.ln(1)
+        pdf.set_font('Helvetica', 'I', 7)
+        pdf.multi_cell(0, 3.2, _latin1(
+            'Documento di supporto alla compilazione: riporta i valori nei campi corrispondenti del '
+            'portale Fatture e Corrispettivi. Verifica con il tuo commercialista la natura IVA, il '
+            'riferimento normativo e il trattamento di bollo e rimborsi spese.'))
+
+    output = io.BytesIO(bytes(pdf.output()))
+    output.seek(0)
+    filename = 'dati_fattura_%d_%02d.pdf' % (year, month)
+    return send_file(output, as_attachment=True, download_name=filename,
+                     mimetype='application/pdf')

@@ -11,5 +11,8 @@ class CustomerForm(FlaskForm):
     zip_code = StringField('CAP', validators=[Optional(), Length(max=16)])
     email = StringField('Email', validators=[Optional(), Email(), Length(max=120)])
     phone = StringField('Telefono', validators=[Optional(), Length(max=32)])
+    sdi_code = StringField('Codice Destinatario SDI', validators=[Optional(), Length(max=7)],
+                           default='0000000')
+    pec = StringField('PEC', validators=[Optional(), Email(), Length(max=120)])
     active = BooleanField('Attivo', default=True)
     submit = SubmitField('Salva Cliente')

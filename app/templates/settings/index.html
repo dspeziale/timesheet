@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block content %}
+<form method="POST" action="">
+    {{ form.hidden_tag() }}
+    <div class="alert alert-info d-flex align-items-start gap-2">
+        <i class="bi bi-info-circle fs-5"></i>
+        <div>
+            Questi dati vengono usati per generare il PDF con i campi da riportare nella
+            procedura di <strong>fattura elettronica</strong> dell'Agenzia delle Entrate.
+            Il PDF si scarica dal <a href="{{ url_for('reports.monthly') }}">Riepilogo Mensile</a>.
+        </div>
+    </div>
+
+    <div class="card card-primary card-outline mb-3">
+        <div class="card-header">
+            <h3 class="card-title mb-0"><i class="bi bi-person-badge"></i> Dati Anagrafici (Cedente / Prestatore)</h3>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">Chi emette la fattura. Compila la denominazione oppure nome e cognome.</p>
+            <div class="row g-3">
+                <div class="col-md-12">
+                    {{ form.denominazione.label(class="form-label") }}
+                    {{ form.denominazione(class="form-control" + (" is-invalid" if form.denominazione.errors else "")) }}
+                    {% for error in form.denominazione.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-6">
+                    {{ form.nome.label(class="form-label") }}
+                    {{ form.nome(class="form-control" + (" is-invalid" if form.nome.errors else "")) }}
+                    {% for error in form.nome.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-6">
+                    {{ form.cognome.label(class="form-label") }}
+                    {{ form.cognome(class="form-control" + (" is-invalid" if form.cognome.errors else "")) }}
+                    {% for error in form.cognome.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-4">
+                    {{ form.partita_iva.label(class="form-label") }}
+                    {{ form.partita_iva(class="form-control" + (" is-invalid" if form.partita_iva.errors else "")) }}
+                    {% for error in form.partita_iva.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-4">
+                    {{ form.codice_fiscale.label(class="form-label") }}
+                    {{ form.codice_fiscale(class="form-control" + (" is-invalid" if form.codice_fiscale.errors else "")) }}
+                    {% for error in form.codice_fiscale.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-4">
+                    {{ form.regime_fiscale.label(class="form-label") }}
+                    {{ form.regime_fiscale(class="form-select" + (" is-invalid" if form.regime_fiscale.errors else "")) }}
+                    {% for error in form.regime_fiscale.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card card-primary card-outline mb-3">
+        <div class="card-header">
+            <h3 class="card-title mb-0"><i class="bi bi-geo-alt"></i> Sede</h3>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    {{ form.indirizzo.label(class="form-label") }}
+                    {{ form.indirizzo(class="form-control" + (" is-invalid" if form.indirizzo.errors else "")) }}
+                    {% for error in form.indirizzo.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-4">
+                    {{ form.numero_civico.label(class="form-label") }}
+                    {{ form.numero_civico(class="form-control" + (" is-invalid" if form.numero_civico.errors else "")) }}
+                    {% for error in form.numero_civico.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-3">
+                    {{ form.cap.label(class="form-label") }}
+                    {{ form.cap(class="form-control" + (" is-invalid" if form.cap.errors else "")) }}
+                    {% for error in form.cap.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-5">
+                    {{ form.comune.label(class="form-label") }}
+                    {{ form.comune(class="form-control" + (" is-invalid" if form.comune.errors else "")) }}
+                    {% for error in form.comune.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-2">
+                    {{ form.provincia.label(class="form-label") }}
+                    {{ form.provincia(class="form-control" + (" is-invalid" if form.provincia.errors else "")) }}
+                    {% for error in form.provincia.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-2">
+                    {{ form.nazione.label(class="form-label") }}
+                    {{ form.nazione(class="form-control" + (" is-invalid" if form.nazione.errors else "")) }}
+                    {% for error in form.nazione.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card card-primary card-outline mb-3">
+        <div class="card-header">
+            <h3 class="card-title mb-0"><i class="bi bi-telephone"></i> Contatti e REA</h3>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">Il REA è facoltativo: serve solo se sei iscritto al Registro Imprese.</p>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    {{ form.telefono.label(class="form-label") }}
+                    {{ form.telefono(class="form-control" + (" is-invalid" if form.telefono.errors else "")) }}
+                    {% for error in form.telefono.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-4">
+                    {{ form.email.label(class="form-label") }}
+                    {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+                    {% for error in form.email.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-2">
+                    {{ form.rea_ufficio.label(class="form-label") }}
+                    {{ form.rea_ufficio(class="form-control" + (" is-invalid" if form.rea_ufficio.errors else "")) }}
+                    {% for error in form.rea_ufficio.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-2">
+                    {{ form.rea_numero.label(class="form-label") }}
+                    {{ form.rea_numero(class="form-control" + (" is-invalid" if form.rea_numero.errors else "")) }}
+                    {% for error in form.rea_numero.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card card-primary card-outline mb-3">
+        <div class="card-header">
+            <h3 class="card-title mb-0"><i class="bi bi-file-earmark-text"></i> Documento e Numerazione</h3>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">Il numero proposto sul PDF parte da qui. Aggiornalo dopo ogni fattura emessa.</p>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    {{ form.tipo_documento.label(class="form-label") }}
+                    {{ form.tipo_documento(class="form-select" + (" is-invalid" if form.tipo_documento.errors else "")) }}
+                    {% for error in form.tipo_documento.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-4">
+                    {{ form.invoice_prefix.label(class="form-label") }}
+                    {{ form.invoice_prefix(class="form-control" + (" is-invalid" if form.invoice_prefix.errors else "")) }}
+                    {% for error in form.invoice_prefix.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-4">
+                    {{ form.invoice_next_number.label(class="form-label") }}
+                    {{ form.invoice_next_number(class="form-control" + (" is-invalid" if form.invoice_next_number.errors else "")) }}
+                    {% for error in form.invoice_next_number.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-6">
+                    {{ form.descrizione_riga.label(class="form-label") }}
+                    {{ form.descrizione_riga(class="form-control" + (" is-invalid" if form.descrizione_riga.errors else "")) }}
+                    {% for error in form.descrizione_riga.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-6">
+                    {{ form.descrizione_spese.label(class="form-label") }}
+                    {{ form.descrizione_spese(class="form-control" + (" is-invalid" if form.descrizione_spese.errors else "")) }}
+                    {% for error in form.descrizione_spese.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card card-primary card-outline mb-3">
+        <div class="card-header">
+            <h3 class="card-title mb-0"><i class="bi bi-percent"></i> Regime Forfettario</h3>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">Valori usati per la riga senza IVA. Verifica con il tuo commercialista che siano quelli corretti per la tua attività.</p>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    {{ form.natura_iva.label(class="form-label") }}
+                    {{ form.natura_iva(class="form-select" + (" is-invalid" if form.natura_iva.errors else "")) }}
+                    {% for error in form.natura_iva.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-8">
+                    {{ form.riferimento_normativo.label(class="form-label") }}
+                    {{ form.riferimento_normativo(class="form-control" + (" is-invalid" if form.riferimento_normativo.errors else ""), rows=3) }}
+                    {% for error in form.riferimento_normativo.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card card-primary card-outline mb-3">
+        <div class="card-header">
+            <h3 class="card-title mb-0"><i class="bi bi-stamp"></i> Imposta di Bollo</h3>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">Sulle fatture senza IVA il bollo è dovuto oltre la soglia indicata.</p>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    {{ form.bollo_importo.label(class="form-label") }}
+                    {{ form.bollo_importo(class="form-control" + (" is-invalid" if form.bollo_importo.errors else "")) }}
+                    {% for error in form.bollo_importo.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-4">
+                    {{ form.bollo_soglia.label(class="form-label") }}
+                    {{ form.bollo_soglia(class="form-control" + (" is-invalid" if form.bollo_soglia.errors else "")) }}
+                    {% for error in form.bollo_soglia.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-4">
+                    {{ form.rivalsa_inps_percent.label(class="form-label") }}
+                    {{ form.rivalsa_inps_percent(class="form-control" + (" is-invalid" if form.rivalsa_inps_percent.errors else "")) }}
+                    {% for error in form.rivalsa_inps_percent.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <div class="form-check">
+                        {{ form.bollo_enabled(class="form-check-input") }}
+                        {{ form.bollo_enabled.label(class="form-check-label") }}
+                    </div>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <div class="form-check">
+                        {{ form.bollo_a_carico_cliente(class="form-check-input") }}
+                        {{ form.bollo_a_carico_cliente.label(class="form-check-label") }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card card-primary card-outline mb-3">
+        <div class="card-header">
+            <h3 class="card-title mb-0"><i class="bi bi-bank"></i> Pagamento</h3>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    {{ form.modalita_pagamento.label(class="form-label") }}
+                    {{ form.modalita_pagamento(class="form-select" + (" is-invalid" if form.modalita_pagamento.errors else "")) }}
+                    {% for error in form.modalita_pagamento.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-4">
+                    {{ form.condizioni_pagamento.label(class="form-label") }}
+                    {{ form.condizioni_pagamento(class="form-select" + (" is-invalid" if form.condizioni_pagamento.errors else "")) }}
+                    {% for error in form.condizioni_pagamento.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-4">
+                    {{ form.giorni_scadenza.label(class="form-label") }}
+                    {{ form.giorni_scadenza(class="form-control" + (" is-invalid" if form.giorni_scadenza.errors else "")) }}
+                    {% for error in form.giorni_scadenza.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-8">
+                    {{ form.iban.label(class="form-label") }}
+                    {{ form.iban(class="form-control" + (" is-invalid" if form.iban.errors else "")) }}
+                    {% for error in form.iban.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-4">
+                    {{ form.banca.label(class="form-label") }}
+                    {{ form.banca(class="form-control" + (" is-invalid" if form.banca.errors else "")) }}
+                    {% for error in form.banca.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body">
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary">Annulla</a>
+        </div>
+    </div>
+</form>
+{% endblock %}
