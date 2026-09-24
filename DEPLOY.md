@@ -53,10 +53,40 @@ I dati di Postgres vivono sul volume `pgdata`, che sopravvive ai redeploy.
    default chiunque conosca l'URL può entrare.
 3. Compila **Impostazioni** con i dati della tua azienda.
 
-## Migrare i dati dal vecchio deploy
+## Migrare i dati
 
-Lo schema è identico, quindi basta spostare i dati. Da Neon verso il Postgres di
-Coolify:
+### Da SQLite (`app.db`) a PostgreSQL
+
+Lo schema sulla destinazione lo crea il container al primo avvio, quindi
+**fai prima il deploy** e solo dopo sposta i dati:
+
+```bash
+# 1. Guarda cosa verrebbe copiato, senza scrivere nulla
+python scripts/migrate_sqlite_to_postgres.py     --source app.db     --target "postgres://utente:password@host:5432/dbname"     --dry-run
+
+# 2. Copia per davvero
+python scripts/migrate_sqlite_to_postgres.py     --source app.db     --target "postgres://utente:password@host:5432/dbname"
+```
+
+Con il Postgres di Coolify serve la **Postgres URL (public)** e la porta
+esposta, perché lo script gira dal tuo PC: la URL interna è raggiungibile solo
+dai container. Se preferisci non esporre il database, esegui lo script dentro
+il container dell'app (Coolify → *Terminal*) dopo averci copiato `app.db`.
+
+Lo script:
+
+- non tocca il sorgente;
+- copia solo le colonne presenti in entrambi i database, quindi funziona anche
+  se il SQLite è fermo a una revision più vecchia (le colonne nuove prendono il
+  default di PostgreSQL);
+- **riallinea le sequenze**: senza quel passaggio il primo inserimento
+  dall'app riuserebbe un id già occupato e fallirebbe;
+- si rifiuta di partire se la destinazione contiene già dati (`--truncate` per
+  sovrascrivere) o se lo schema non è ancora stato creato.
+
+### Da un altro PostgreSQL (es. Neon)
+
+Lo schema è identico, quindi basta un dump:
 
 ```bash
 pg_dump "$VECCHIO_DATABASE_URL" --no-owner --no-acl -Fc -f timesheet.dump
