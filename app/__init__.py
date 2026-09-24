@@ -51,6 +51,9 @@ def create_app(config_class=Config):
     from app.routes.settings import settings_bp
     app.register_blueprint(settings_bp)
 
+    from app.routes.admin import admin_bp
+    app.register_blueprint(admin_bp)
+
     @app.template_filter('ita_day')
     def ita_day(date):
         giorni = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"]

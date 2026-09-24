@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card card-primary card-outline">
+    <div class="card-header">
+        <h3 class="card-title">{{ title }}</h3>
+    </div>
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        <div class="card-body">
+            <div class="mb-3">
+                {{ form.name.label(class="form-label") }}
+                {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), rows=3) }}
+                {% for error in form.name.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+                <div class="form-text">
+                    È il testo che finisce nella colonna Attività del timesheet.
+                </div>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    {{ form.categoria.label(class="form-label") }}
+                    {{ form.categoria(class="form-select") }}
+                    <div class="form-text">
+                        Solo le attività con un'area entrano nella compilazione automatica.
+                    </div>
+                </div>
+                <div class="col-md-6 d-flex align-items-center">
+                    <div class="form-check mt-4">
+                        {{ form.active(class="form-check-input") }}
+                        {{ form.active.label(class="form-check-label") }}
+                    </div>
+                </div>
+            </div>
+            {% if attivita and attivita.timesheets.count() %}
+            <div class="alert alert-info mt-3 mb-0">
+                <i class="bi bi-info-circle"></i>
+                Questa attività è usata da <strong>{{ attivita.timesheets.count() }}</strong>
+                giornate: modificando la descrizione cambia anche su quelle.
+            </div>
+            {% endif %}
+        </div>
+        <div class="card-footer">
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('admin.activities') }}" class="btn btn-secondary">Annulla</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

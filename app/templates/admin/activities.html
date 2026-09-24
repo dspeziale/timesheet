@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% macro riga(a) %}
+<tr class="{{ '' if a.active else 'opacity-50' }}">
+    <td>{{ a.name }}</td>
+    <td class="text-center">
+        {% if a.active %}
+        <span class="badge bg-success">Attiva</span>
+        {% else %}
+        <span class="badge bg-secondary">Disattivata</span>
+        {% endif %}
+    </td>
+    <td class="text-center text-nowrap">{{ a.timesheets.count() }}</td>
+    <td class="text-nowrap">
+        <a href="{{ url_for('admin.activity_edit', id=a.id) }}"
+           class="btn btn-warning btn-sm" title="Modifica">
+            <i class="bi bi-pencil"></i>
+        </a>
+        <form action="{{ url_for('admin.activity_toggle', id=a.id) }}"
+              method="POST" class="d-inline">
+            <button type="submit" class="btn btn-secondary btn-sm"
+                    title="{{ 'Disattiva' if a.active else 'Riattiva' }}">
+                <i class="bi bi-{{ 'pause' if a.active else 'play' }}"></i>
+            </button>
+        </form>
+        <form action="{{ url_for('admin.activity_delete', id=a.id) }}"
+              method="POST" class="d-inline">
+            <button type="submit" class="btn btn-danger btn-sm" title="Elimina"
+                    onclick="return confirm('Eliminare questa attività?');">
+                <i class="bi bi-trash"></i>
+            </button>
+        </form>
+    </td>
+</tr>
+{% endmacro %}
+
+{% block content %}
+<div class="card card-primary card-outline">
+    <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+        <h3 class="card-title mb-0">Catalogo Attività ({{ totale }})</h3>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('admin.fill_month') }}" class="btn btn-success btn-sm text-nowrap">
+                <i class="bi bi-calendar-check"></i> Compila Mese
+            </a>
+            <a href="{{ url_for('admin.activity_add') }}" class="btn btn-primary btn-sm text-nowrap">
+                <i class="bi bi-plus-circle"></i> Nuova Attività
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">
+            Le attività con un'area assegnata vengono distribuite a rotazione dalla
+            <a href="{{ url_for('admin.fill_month') }}">compilazione automatica del mese</a>.
+            Quelle disattivate restano sulle giornate già registrate ma non vengono più proposte.
+        </p>
+
+        {% for categoria, elenco in gruppi %}
+        <h5 class="mt-4">
+            <i class="bi bi-tag"></i> {{ categoria }}
+            <span class="badge bg-primary">{{ elenco|length }}</span>
+        </h5>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Descrizione</th>
+                        <th class="text-center" style="width: 8rem;">Stato</th>
+                        <th class="text-center" style="width: 7rem;">Giornate</th>
+                        <th style="width: 10rem;">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in elenco %}{{ riga(a) }}{% else %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">
+                            Nessuna attività in quest'area.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+
+        {% if senza_categoria %}
+        <h5 class="mt-4">
+            <i class="bi bi-question-circle"></i> Senza area
+            <span class="badge bg-secondary">{{ senza_categoria|length }}</span>
+        </h5>
+        <p class="text-muted small">
+            Attività scritte a mano su una giornata. Non entrano nella compilazione
+            automatica finché non assegni loro un'area.
+        </p>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Descrizione</th>
+                        <th class="text-center" style="width: 8rem;">Stato</th>
+                        <th class="text-center" style="width: 7rem;">Giornate</th>
+                        <th style="width: 10rem;">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in senza_categoria %}{{ riga(a) }}{% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

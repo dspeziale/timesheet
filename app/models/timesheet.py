@@ -1,11 +1,18 @@
 from app import db
 from datetime import datetime
 
+# Aree in cui e' classificato il catalogo delle attivita'
+CATEGORIE_ATTIVITA = ('Sviluppo', 'Manutenzione', 'Esercizio')
+
+
 class Activity(db.Model):
     __tablename__ = 'activities'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Text, nullable=False, unique=True)
     active = db.Column(db.Boolean, default=True)
+    # Solo le attivita' con una categoria entrano nella compilazione automatica
+    # del mese; quelle scritte a mano sul singolo timesheet restano senza.
+    categoria = db.Column(db.String(32), default='', server_default='')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     timesheets = db.relationship('TimesheetEntry', backref='activity', lazy='dynamic')

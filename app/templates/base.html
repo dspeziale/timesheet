@@ -110,10 +110,23 @@
                                 <p>Calendario Mensile</p>
                             </a>
                         </li>
+                        <li class="nav-header">Amministrazione</li>
                         <li class="nav-item">
                             <a href="{{ url_for('settings.index') }}" class="nav-link">
                                 <i class="nav-icon bi bi-gear"></i>
                                 <p>Impostazioni</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ url_for('admin.activities') }}" class="nav-link">
+                                <i class="nav-icon bi bi-tags"></i>
+                                <p>Catalogo Attività</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ url_for('admin.fill_month') }}" class="nav-link">
+                                <i class="nav-icon bi bi-calendar-check"></i>
+                                <p>Compila Mese</p>
                             </a>
                         </li>
                         <li class="nav-header">Reportistica</li>
