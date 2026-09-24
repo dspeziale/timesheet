@@ -1,0 +1,16 @@
+# Normalizza i fine riga: di default LF nel repository.
+* text=auto eol=lf
+
+# File che DEVONO restare LF: con CRLF lo shebang non viene riconosciuto
+# dentro il container Linux e l'avvio fallisce con "no such file or directory".
+*.sh text eol=lf
+Dockerfile text eol=lf
+docker-compose.yaml text eol=lf
+.dockerignore text eol=lf
+
+# Binari: nessuna conversione
+*.db binary
+*.xlsx binary
+*.pdf binary
+*.png binary
+*.jpg binary

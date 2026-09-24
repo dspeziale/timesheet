@@ -6,6 +6,7 @@ from app.models.project import Project
 from app.models.timesheet import TimesheetEntry
 from datetime import datetime
 import calendar
+from sqlalchemy import text
 from app import db
 
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -50,6 +51,18 @@ def index():
                            working_days_in_month=working_days_in_month,
                            expected_revenue=expected_revenue,
                            actual_revenue=actual_revenue)
+
+@dashboard_bp.route('/healthz')
+def healthz():
+    """Sonda per l'healthcheck del container: non richiede login e verifica
+    che il database risponda, cosi' un deploy con DB irraggiungibile non viene
+    dichiarato sano."""
+    try:
+        db.session.execute(text('SELECT 1'))
+        return jsonify({'status': 'ok'}), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'detail': str(e)}), 503
+
 
 @dashboard_bp.route('/sysinfo')
 @login_required

@@ -1,4 +1,3 @@
-.vercel
 venv/
 __pycache__/
 *.pyc
@@ -9,3 +8,9 @@ env/
 .env
 instance/
 *.sqlite3
+
+# Deploy locale (Docker / Coolify)
+.env
+.env.local
+data/
+app.db

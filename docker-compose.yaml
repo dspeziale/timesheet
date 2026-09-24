@@ -1,0 +1,41 @@
+# Stack completo app + PostgreSQL, per il build pack "Docker Compose" di Coolify.
+# Se il database lo tieni fuori (Neon, Supabase, un Postgres gia' esistente),
+# usa invece il build pack "Dockerfile" e imposta solo DATABASE_URL.
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    environment:
+      # Obbligatoria: senza una chiave stabile le sessioni saltano a ogni riavvio
+      SECRET_KEY: ${SECRET_KEY:?serve una SECRET_KEY}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-timesheet}:${POSTGRES_PASSWORD:?serve una password}@db:5432/${POSTGRES_DB:-timesheet}
+      APP_NAME: ${APP_NAME:-RoxySheet}
+      TZ: ${TZ:-Europe/Rome}
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-timesheet}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?serve una password}
+      POSTGRES_DB: ${POSTGRES_DB:-timesheet}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-timesheet}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
