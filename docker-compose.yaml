@@ -9,7 +9,7 @@ services:
       # Obbligatoria: senza una chiave stabile le sessioni saltano a ogni riavvio
       SECRET_KEY: ${SECRET_KEY:?serve una SECRET_KEY}
       DATABASE_URL: postgresql://${POSTGRES_USER:-timesheet}:${POSTGRES_PASSWORD:?serve una password}@db:5432/${POSTGRES_DB:-timesheet}
-      APP_NAME: ${APP_NAME:-RoxySheet}
+      APP_NAME: ${APP_NAME:-Timesheet}
       TZ: ${TZ:-Europe/Rome}
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
     depends_on:

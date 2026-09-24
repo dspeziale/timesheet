@@ -69,7 +69,7 @@ def create_app(config_class=Config):
     @app.context_processor
     def inject_global_vars():
         return dict(
-            APP_NAME=app.config.get('APP_NAME', 'RoxySheet'),
+            APP_NAME=app.config.get('APP_NAME', 'Timesheet'),
             APP_VERSION=app.config.get('APP_VERSION', '1.0')
         )
 

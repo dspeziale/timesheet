@@ -254,10 +254,10 @@
                     themeIcon.removeClass('bi-sun-fill').addClass('bi-moon-fill');
                     sidebarElement.attr('data-bs-theme', 'light');
                 }
-                localStorage.setItem('roxysheet-theme', theme);
+                localStorage.setItem('timesheet-theme', theme);
             }
 
-            const savedTheme = localStorage.getItem('roxysheet-theme') || 'light';
+            const savedTheme = localStorage.getItem('timesheet-theme') || 'light';
             setTheme(savedTheme);
 
             themeBtn.on('click', function() {
@@ -266,13 +266,13 @@
             });
 
             // Font Size Toggle
-            let currentFontSize = parseInt(localStorage.getItem('roxysheet-fontsize')) || 20;
+            let currentFontSize = parseInt(localStorage.getItem('timesheet-fontsize')) || 20;
             const rootStyle = document.documentElement.style;
             
             function applyFontSize(size) {
                 currentFontSize = size;
                 rootStyle.setProperty('--app-font-size', size + 'px');
-                localStorage.setItem('roxysheet-fontsize', size);
+                localStorage.setItem('timesheet-fontsize', size);
             }
             
             applyFontSize(currentFontSize);

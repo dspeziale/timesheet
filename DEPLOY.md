@@ -24,7 +24,7 @@ L'app gira in un container Docker: `gunicorn` serve Flask, e all'avvio
    |---|---|
    | `SECRET_KEY` | **obbligatoria** — genera con `python -c "import secrets; print(secrets.token_hex(32))"` |
    | `DATABASE_URL` | `postgresql://utente:password@host:5432/dbname` |
-   | `APP_NAME` | `RoxySheet` (facoltativa) |
+   | `APP_NAME` | `Timesheet` (facoltativa) |
    | `TZ` | `Europe/Rome` (facoltativa) |
 
 5. **Health Check Path**: `/healthz`.

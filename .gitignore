@@ -14,3 +14,6 @@ instance/
 .env.local
 data/
 app.db
+
+# Appunti locali con credenziali: non devono finire nel repository
+tips.txt

@@ -19,7 +19,7 @@ class Config:
         'pool_recycle': 280,
     }
     
-    APP_NAME = os.environ.get('APP_NAME') or 'RoxySheet'
+    APP_NAME = os.environ.get('APP_NAME') or 'Timesheet'
     APP_VERSION = os.environ.get('APP_VERSION') or '1.2.0'
     
     # Regime Forfettario Tax Variables
