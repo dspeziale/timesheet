@@ -1,11 +1,12 @@
 #!/bin/sh
-# Avvio del container: prima allinea lo schema, poi serve l'app.
+# Avvio del container: attende il database, allinea lo schema, serve l'app.
 #
 # A differenza del deploy serverless, qui c'e' un processo di avvio dedicato:
 # le migration girano una volta sola, prima dei worker, ed e' questa la via
-# ufficiale per aggiornare lo schema (l'allineamento automatico delle colonne
-# in create_app resta solo come rete di sicurezza).
+# ufficiale per aggiornare lo schema.
 set -e
+
+python /app/wait_for_db.py
 
 echo "[entrypoint] Applico le migration del database..."
 flask db upgrade

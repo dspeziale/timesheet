@@ -67,6 +67,21 @@ pg_restore -d "$NUOVO_DATABASE_URL" --no-owner --no-acl timesheet.dump
 Se invece punti il nuovo container al database Neon già esistente, non serve
 fare nulla: `flask db upgrade` vede lo schema già aggiornato e non tocca niente.
 
+## Se il deploy fallisce
+
+All'avvio il container attende il database (30 tentativi ogni 2 secondi) prima
+di applicare le migration. Se non lo raggiunge, esce con un messaggio che dice
+quale sia il problema invece del traceback di SQLAlchemy:
+
+| Messaggio nei log | Cosa controllare |
+|---|---|
+| `L'hostname del database non si risolve` | Il PostgreSQL è avviato? L'hostname in `DATABASE_URL` è quello **attuale**? Cancellando e ricreando il database in Coolify l'hostname cambia. |
+| `Credenziali rifiutate` | La password è applicata solo alla prima creazione del volume, quindi quella mostrata nell'interfaccia può essere disallineata. Dal *Terminal* del database: `psql -U postgres -c "ALTER USER postgres PASSWORD '...';"` |
+| `Il database indicato non esiste` | L'ultima parte di `DATABASE_URL`, dopo la porta. |
+| `Connessione rifiutata` | L'host risponde ma non c'è PostgreSQL in ascolto su quella porta. |
+
+L'attesa si regola con `DB_WAIT_ATTEMPTS` e `DB_WAIT_INTERVAL`.
+
 ## Aggiornamenti
 
 Un push su `main` fa partire il redeploy (se hai attivato l'auto-deploy). Le
