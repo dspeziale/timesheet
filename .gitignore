@@ -7,13 +7,11 @@ __pycache__/
 env/
 .env
 instance/
-*.sqlite3
 
 # Deploy locale (Docker / Coolify)
 .env
 .env.local
 data/
-app.db
 
 # Appunti locali con credenziali: non devono finire nel repository
 tips.txt

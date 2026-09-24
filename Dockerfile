@@ -20,11 +20,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Utente non privilegiato; /data ospita il volume persistente (usato da SQLite)
+# Utente non privilegiato
 RUN chmod +x docker-entrypoint.sh \
  && useradd --create-home --uid 10001 app \
- && mkdir -p /data \
- && chown -R app:app /app /data
+ && chown -R app:app /app
 USER app
 
 EXPOSE 8000

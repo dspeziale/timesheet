@@ -13,8 +13,6 @@ __pycache__/
 .env.*
 !.env.example
 instance/
-*.sqlite3
-app.db
 *.md
 .vscode/
 .idea/

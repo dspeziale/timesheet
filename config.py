@@ -2,13 +2,40 @@ import os
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
+
+def _database_uri():
+    """URL del database, obbligatoriamente PostgreSQL.
+
+    Non esiste un ripiego: senza DATABASE_URL l'applicazione non parte. Un
+    fallback silenzioso su un file locale sembrerebbe funzionare, ma i dati
+    verrebbero scritti dentro il container e andrebbero persi a ogni riavvio,
+    facendo sembrare che sia il database a svuotarsi.
+    """
+    url = (os.environ.get('DATABASE_URL') or '').strip()
+    if not url:
+        raise RuntimeError(
+            "DATABASE_URL non e' impostata. Serve l'URL del database "
+            "PostgreSQL, per esempio "
+            "postgresql://utente:password@host:5432/nomedb"
+        )
+
+    # Coolify, Heroku e altri usano ancora lo schema postgres://,
+    # che SQLAlchemy 2 non accetta.
+    if url.startswith('postgres://'):
+        url = url.replace('postgres://', 'postgresql://', 1)
+
+    if not url.startswith('postgresql'):
+        raise RuntimeError(
+            "DATABASE_URL deve puntare a un database PostgreSQL, "
+            "ricevuto invece: %s" % url.split('://')[0]
+        )
+    return url
+
+
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
-    db_url = os.environ.get('DATABASE_URL')
-    if db_url and db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
-        
-    SQLALCHEMY_DATABASE_URI = db_url or 'sqlite:///' + os.path.join(basedir, 'app.db')
+
+    SQLALCHEMY_DATABASE_URI = _database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Robustezza connessione DB su ambienti serverless (Vercel + Neon/Postgres):
