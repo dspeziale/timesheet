@@ -17,11 +17,9 @@ L'app gira in un container Docker: `gunicorn` serve Flask, e all'avvio
 1. In Coolify: **New Resource → Application → Public/Private Repository**, scegli
    questo repo e il branch `main`.
 2. **Build Pack**: `Dockerfile`. Coolify trova da solo il `Dockerfile` nella root.
-3. **Port**: `8000`. L'applicazione ascolta sempre sulla 8000: la variabile
-   `PORT` che Coolify inietta viene ignorata di proposito, perché farebbe
-   ascoltare gunicorn su una porta diversa da quella verso cui il proxy
-   instrada. Per cambiarla usa `APP_PORT`, ricordandoti di allineare anche
-   questo campo.
+3. **Port**: `8000` (o qualsiasi altra: l'applicazione si mette in ascolto
+   sulla porta indicata da `PORT`, che Coolify imposta da questo campo, con
+   8000 come default. Proxy, healthcheck e gunicorn restano allineati da soli.)
 4. **Environment Variables** (vedi `.env.example`):
 
    | Variabile | Valore |

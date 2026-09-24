@@ -4,7 +4,7 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     FLASK_APP=run.py \
-    APP_PORT=8000
+    PORT=8000
 
 WORKDIR /app
 
@@ -29,6 +29,6 @@ USER app
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD curl -fsS "http://127.0.0.1:${APP_PORT:-8000}/healthz" || exit 1
+    CMD curl -fsS "http://127.0.0.1:${PORT:-8000}/healthz" || exit 1
 
 ENTRYPOINT ["./docker-entrypoint.sh"]
