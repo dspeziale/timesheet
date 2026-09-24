@@ -6,7 +6,8 @@ from app.models.project import Project
 from app.models.timesheet import TimesheetEntry
 from datetime import datetime
 import calendar
-from sqlalchemy import text
+from sqlalchemy import text, inspect
+from sqlalchemy.engine.url import make_url
 from app import db
 
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -64,6 +65,63 @@ def healthz():
         return jsonify({'status': 'error', 'detail': str(e)}), 503
 
 
+def _database_info():
+    """Stato e contenuto del database, per la finestra Info di Sistema.
+
+    La password non viene mai esposta: dalla stringa di connessione si
+    prendono solo host, porta, nome e utente. Ogni interrogazione e' isolata,
+    cosi' un permesso mancante non fa fallire l'intero blocco.
+    """
+    info = {}
+
+    url = make_url(db.engine.url)
+    info['motore'] = url.get_backend_name()
+    info['host'] = url.host
+    info['porta'] = url.port or 5432
+    info['nome'] = url.database
+    info['utente'] = url.username
+
+    def _scalare(sql, default=None):
+        try:
+            return db.session.execute(text(sql)).scalar()
+        except Exception:
+            db.session.rollback()
+            return default
+
+    versione = _scalare('SELECT version()')
+    if versione:
+        # "PostgreSQL 16.4 (Debian ...) on x86_64..." -> "PostgreSQL 16.4"
+        info['versione'] = ' '.join(str(versione).split()[:2])
+    info['dimensione'] = _scalare(
+        'SELECT pg_size_pretty(pg_database_size(current_database()))')
+    info['connessioni'] = _scalare(
+        'SELECT count(*) FROM pg_stat_activity WHERE datname = current_database()')
+    info['schema'] = _scalare('SELECT version_num FROM alembic_version')
+
+    # Conteggio esatto per tabella: i dati sono pochi e n_live_tup sarebbe
+    # una stima, a zero finche' non passa autovacuum.
+    tabelle = []
+    try:
+        esistenti = set(inspect(db.engine).get_table_names())
+        for tabella in db.metadata.sorted_tables:
+            if tabella.name not in esistenti:
+                continue
+            righe = _scalare('SELECT count(*) FROM "%s"' % tabella.name)
+            tabelle.append({'nome': tabella.name, 'righe': righe})
+    except Exception:
+        db.session.rollback()
+    info['tabelle'] = tabelle
+    info['righe_totali'] = sum(t['righe'] or 0 for t in tabelle)
+
+    pool = db.engine.pool
+    try:
+        info['pool'] = {'in_uso': pool.checkedout(), 'disponibili': pool.checkedin()}
+    except Exception:
+        info['pool'] = None
+
+    return info
+
+
 @dashboard_bp.route('/sysinfo')
 @login_required
 def sysinfo():
@@ -90,11 +148,17 @@ def sysinfo():
         except Exception:
             pass
 
+        try:
+            database = _database_info()
+        except Exception as e:
+            database = {'errore': str(e)}
+
         return jsonify({
             'cpu': {'usage': cpu_usage, 'cores': cpu_cores},
             'memory': {'total_gb': mem_total, 'used_gb': mem_used, 'percent': mem_percent},
             'network': {'sent_mb': net_sent, 'recv_mb': net_recv},
-            'temperatures': temps
+            'temperatures': temps,
+            'database': database
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

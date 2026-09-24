@@ -190,7 +190,7 @@
 
     <!-- System Info Modal -->
     <div class="modal fade" id="sysInfoModal" tabindex="-1" aria-labelledby="sysInfoModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="sysInfoModalLabel">Informazioni di Sistema</h5>
@@ -204,7 +204,10 @@
                 <p class="mt-2">Acquisizione dati in corso...</p>
             </div>
             <div id="sysInfoData" class="d-none">
-                <ul class="list-group">
+                <h6 class="fw-bold text-uppercase text-muted small mb-2">
+                    <i class="bi bi-cpu"></i> Sistema
+                </h6>
+                <ul class="list-group mb-3">
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         CPU
                         <span id="cpuData" class="badge bg-primary rounded-pill"></span>
@@ -222,6 +225,57 @@
                         <span id="tempData" class="badge bg-danger rounded-pill"></span>
                     </li>
                 </ul>
+
+                <h6 class="fw-bold text-uppercase text-muted small mb-2">
+                    <i class="bi bi-database"></i> Database
+                </h6>
+                <div id="dbError" class="alert alert-warning py-2 d-none"></div>
+                <ul class="list-group mb-3" id="dbInfoList">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Motore
+                        <span id="dbEngine" class="badge bg-success rounded-pill"></span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Server
+                        <span id="dbHost" class="text-end small"></span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Database / Utente
+                        <span id="dbName" class="text-end small"></span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Dimensione
+                        <span id="dbSize" class="badge bg-primary rounded-pill"></span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Connessioni attive
+                        <span id="dbConn" class="badge bg-primary rounded-pill"></span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Pool (in uso / disponibili)
+                        <span id="dbPool" class="badge bg-secondary rounded-pill"></span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Versione schema
+                        <span id="dbSchema" class="badge bg-secondary rounded-pill"></span>
+                    </li>
+                </ul>
+
+                <h6 class="fw-bold text-uppercase text-muted small mb-2">
+                    <i class="bi bi-table"></i> Contenuto
+                    <span id="dbTotalRows" class="badge bg-primary rounded-pill ms-1"></span>
+                </h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Tabella</th>
+                                <th class="text-end">Righe</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dbTables"></tbody>
+                    </table>
+                </div>
             </div>
           </div>
           <div class="modal-footer">
@@ -320,6 +374,36 @@
                             $('#tempContainer').removeClass('d-none');
                         } else {
                             $('#tempContainer').addClass('d-none');
+                        }
+
+                        // --- Database ---
+                        const db = data.database || {};
+                        if(db.errore) {
+                            $('#dbError').text('Database non raggiungibile: ' + db.errore)
+                                         .removeClass('d-none');
+                            $('#dbInfoList').addClass('d-none');
+                            $('#dbTables').empty();
+                            $('#dbTotalRows').text('');
+                        } else {
+                            $('#dbError').addClass('d-none');
+                            $('#dbInfoList').removeClass('d-none');
+                            $('#dbEngine').text(db.versione || db.motore || '—');
+                            $('#dbHost').text((db.host || '—') + ':' + (db.porta || '—'));
+                            $('#dbName').text((db.nome || '—') + ' / ' + (db.utente || '—'));
+                            $('#dbSize').text(db.dimensione || '—');
+                            $('#dbConn').text(db.connessioni != null ? db.connessioni : '—');
+                            $('#dbPool').text(db.pool ? (db.pool.in_uso + ' / ' + db.pool.disponibili) : '—');
+                            $('#dbSchema').text(db.schema || '—');
+                            $('#dbTotalRows').text((db.righe_totali != null ? db.righe_totali : 0) + ' righe');
+
+                            const corpo = $('#dbTables').empty();
+                            (db.tabelle || []).forEach(function(t) {
+                                corpo.append('<tr><td>' + t.nome + '</td>' +
+                                    '<td class="text-end">' + (t.righe != null ? t.righe : '—') + '</td></tr>');
+                            });
+                            if(!(db.tabelle || []).length) {
+                                corpo.append('<tr><td colspan="2" class="text-center text-muted">Nessuna tabella.</td></tr>');
+                            }
                         }
 
                         $('#sysInfoContent').addClass('d-none');
