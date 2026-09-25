@@ -9,6 +9,33 @@ import calendar
 
 timesheets_bp = Blueprint('timesheets', __name__, url_prefix='/timesheets')
 
+def _popola_attivita(form):
+    """Riempie il menu delle attivita' gia' a catalogo.
+
+    Va chiamata PRIMA di validate_on_submit(): con le choices ancora vuote
+    SelectField rifiuta qualunque voce scelta dall'utente e il salvataggio
+    fallisce senza mostrare alcun errore.
+    """
+    attivita = Activity.query.filter_by(active=True).order_by(Activity.name).all()
+    form.activity_select.choices = (
+        [('', '--- Scegli una precedente ---')]
+        + [(a.name, a.name[:50] + ('...' if len(a.name) > 50 else ''))
+           for a in attivita]
+    )
+
+
+def _segnala_errori(form):
+    """Porta a galla gli errori di validazione del form.
+
+    Senza questo un campo che non passa la validazione ricarica la pagina
+    senza spiegazioni: si vede solo che il salvataggio non e' avvenuto.
+    """
+    for campo, errori in form.errors.items():
+        etichetta = getattr(form, campo).label.text
+        for errore in errori:
+            flash('%s: %s' % (etichetta, errore), 'danger')
+
+
 def _project_trasferta_rates(projects):
     """Spese di trasferta configurate su ogni commessa, per la proposta nel form."""
     return {
@@ -43,6 +70,8 @@ def add():
     active_projects = Project.query.filter_by(status='Attivo').all()
     form.project_id.choices = [(p.id, p.name) for p in active_projects]
     trasferta_rates = _project_trasferta_rates(active_projects)
+    _popola_attivita(form)
+
     if form.validate_on_submit():
         # Check max 1.0 day per date
         work_date = form.work_date.data
@@ -54,10 +83,10 @@ def add():
         current_total = sum(float(e.days_worked) for e in existing_entries)
 
         if current_total + days_to_add > 1.0:
-            flash(f'Errore: per il {work_date.strftime("%d/%m/%Y")} risultano giÃ  {current_total} giornate registrate. Non Ã¨ possibile superare 1.0.', 'danger')
+            flash(f'Errore: per il {work_date.strftime("%d/%m/%Y")} risultano già {current_total} giornate registrate. Non è possibile superare 1.0.', 'danger')
             return render_template('timesheets/form.html', title='Nuovo Timesheet', form=form, trasferta_rates=trasferta_rates)
 
-        # Se ferie: azzera tutti gli altri campi. Altrimenti progetto e attivitÃ  sono obbligatori.
+        # Se ferie: azzera tutti gli altri campi. Altrimenti progetto e attività sono obbligatori.
         activity_id = None
         project_id = None
         if not is_ferie:
@@ -66,7 +95,7 @@ def add():
                 return render_template('timesheets/form.html', title='Nuovo Timesheet', form=form, trasferta_rates=trasferta_rates)
             activity_name_input = (form.activity_name.data or '').strip()
             if not activity_name_input:
-                flash("L'attivitÃ  Ã¨ obbligatoria per le giornate lavorate.", 'danger')
+                flash("L'attività è obbligatoria per le giornate lavorate.", 'danger')
                 return render_template('timesheets/form.html', title='Nuovo Timesheet', form=form, trasferta_rates=trasferta_rates)
             project_id = form.project_id.data
             activity = Activity.query.filter_by(name=activity_name_input).first()
@@ -96,6 +125,9 @@ def add():
         flash('Timesheet registrato con successo!', 'success')
         return redirect(url_for('timesheets.index'))
 
+    if request.method == 'POST':
+        _segnala_errori(form)
+
     if request.method == 'GET':
         # Data preselezionata (es. clic su un giorno del calendario), fallback a oggi
         date_arg = request.args.get('date')
@@ -107,8 +139,6 @@ def add():
                 preset = None
         form.work_date.data = preset or datetime.today().date()
 
-    activities = Activity.query.filter_by(active=True).order_by(Activity.name).all()
-    form.activity_select.choices = [('', '--- Scegli una precedente ---')] + [(a.name, a.name[:50] + ('...' if len(a.name)>50 else '')) for a in activities]
 
     return render_template('timesheets/form.html', title='Nuovo Timesheet', form=form, trasferta_rates=trasferta_rates)
 
@@ -130,7 +160,8 @@ def edit(id):
     active_projects = Project.query.filter_by(status='Attivo').all()
     form.project_id.choices = [(p.id, p.name) for p in active_projects]
     trasferta_rates = _project_trasferta_rates(active_projects)
-    
+    _popola_attivita(form)
+
     if form.validate_on_submit():
         work_date = form.work_date.data
         is_ferie = form.is_ferie.data
@@ -146,9 +177,7 @@ def edit(id):
 
         if current_total + days_to_add > 1.0:
             flash(f'Errore: per il {work_date.strftime("%d/%m/%Y")} risultano già {current_total} giornate registrate da altre voci. Non è possibile superare 1.0.', 'danger')
-            activities = Activity.query.filter_by(active=True).order_by(Activity.name).all()
-            activity_names = [a.name for a in activities]
-            return render_template('timesheets/form.html', title='Modifica Timesheet', form=form, activity_names=activity_names, trasferta_rates=trasferta_rates)
+            return render_template('timesheets/form.html', title='Modifica Timesheet', form=form, trasferta_rates=trasferta_rates)
 
         # Se ferie: azzera tutti gli altri campi. Altrimenti progetto e attività sono obbligatori.
         activity_id = None
@@ -186,7 +215,10 @@ def edit(id):
         flash('Timesheet aggiornato con successo!', 'success')
         return redirect(url_for('timesheets.index'))
 
-    elif request.method == 'GET':
+    elif request.method == 'POST':
+        _segnala_errori(form)
+
+    if request.method == 'GET':
         form.work_date.data = entry.work_date
         form.project_id.data = entry.project_id
         form.days_worked.data = str(entry.days_worked)
@@ -199,8 +231,6 @@ def edit(id):
         form.trasferta_extra.data = entry.trasferta_extra
         form.notes.data = entry.notes
 
-    activities = Activity.query.filter_by(active=True).order_by(Activity.name).all()
-    form.activity_select.choices = [('', '--- Scegli una precedente ---')] + [(a.name, a.name[:50] + ('...' if len(a.name)>50 else '')) for a in activities]
         
     return render_template('timesheets/form.html', title='Modifica Timesheet', form=form, trasferta_rates=trasferta_rates)
 
